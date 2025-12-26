@@ -179,6 +179,40 @@ MOOV_API_SECRET = os.getenv('MOOV_API_SECRET', '')
 # Templates d'emails
 EMAIL_TEMPLATE_DIR = BASE_DIR / 'templates/emails'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Configuration pour les images d'actualités
+ACTUALITES_IMAGE_DIR = 'actualites/'
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+
+# settings.py
+
+# Configuration Orange Money
+ORANGE_MONEY_API_URL = os.getenv('ORANGE_MONEY_API_URL', 'https://api.orange.com/orange-money-webpay/bf/v1')
+ORANGE_MONEY_API_KEY = os.getenv('ORANGE_MONEY_API_KEY', '')
+ORANGE_MONEY_API_SECRET = os.getenv('ORANGE_MONEY_API_SECRET', '')
+ORANGE_MONEY_MERCHANT_CODE = os.getenv('ORANGE_MONEY_MERCHANT_CODE', '')
+ORANGE_MONEY_CALLBACK_URL = os.getenv('ORANGE_MONEY_CALLBACK_URL', 'https://votre-domaine.com/paiement/callback')
+
+# Configuration Moov Money
+MOOV_MONEY_API_URL = os.getenv('MOOV_MONEY_API_URL', 'https://api.moov-africa.com/bf')
+MOOV_MONEY_API_KEY = os.getenv('MOOV_MONEY_API_KEY', '')
+MOOV_MONEY_API_SECRET = os.getenv('MOOV_MONEY_API_SECRET', '')
+MOOV_MONEY_MERCHANT_ID = os.getenv('MOOV_MONEY_MERCHANT_ID', '')
+MOOV_MONEY_CALLBACK_URL = os.getenv('MOOV_MONEY_CALLBACK_URL', 'https://votre-domaine.com/paiement/callback')
+
+# URL de base de votre application
+BASE_URL = os.getenv('BASE_URL', 'https://votre-domaine.com')
+
+SYSTEM_CONFIG = {
+    'BACKUP_DIR': '/var/backups/app',
+    'ENCRYPTION_KEY': Fernet.generate_key(),  # À stocker dans les variables d'environnement
+    'LOG_RETENTION_DAYS': 90,
+    'METRIC_RETENTION_DAYS': 30,
+}
+
 # Configuration du logging
 LOGGING = {
     'version': 1,
@@ -225,6 +259,42 @@ LOGGING = {
             'handlers': ['security_file', 'console'],
             'level': 'WARNING',
             'propagate': False,
+        },
+    },
+}
+
+# settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/ventes.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'apps.ventes': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
         },
     },
 }

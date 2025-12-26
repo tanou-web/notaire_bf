@@ -19,3 +19,23 @@ class ContactInformations(models.Model):
     class Meta:
         managed = False
         db_table = 'contact_informations'
+
+
+class ContactMessage(models.Model):
+    """Managed model to store contact form submissions."""
+    name = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    sent = models.BooleanField(default=False)
+    error = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'contact_messages'
+
+    def __str__(self):
+        return f"ContactMessage({self.email} - {self.subject})"

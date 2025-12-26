@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.utils import timezone
 from .models import DemandesDemande
 from .serializers import DemandeSerializer, DemandeCreateSerializer
 from apps.utilisateurs.permissions import IsOwnerOrReadOnly
@@ -56,13 +57,14 @@ class DemandeViewSet(viewsets.ModelViewSet):
     def completer_traitement(self, request, pk=None):
         demande = self.get_object()
         document_genere = request.FILES.get('document_genere')
-        
+
         if not document_genere:
             return Response({
                 'error': 'Le document généré est requis'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        demande.document_genere = document_genere
+
+        # Store filename/path — storage handling can be improved later
+        demande.document_genere = getattr(document_genere, 'name', str(document_genere))
         demande.statut = 'document_envoye_email'
         demande.date_envoi_email = timezone.now()
         demande.save()

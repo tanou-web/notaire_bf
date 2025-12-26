@@ -9,22 +9,37 @@ from django.db import models
 
 
 class DemandesDemande(models.Model):
-    reference = models.CharField(unique=True, max_length=50)
-    utilisateur = models.ForeignKey('UtilisateursUser', models.DO_NOTHING)
-    document = models.ForeignKey('DocumentsDocument', models.DO_NOTHING)
-    statut = models.CharField(max_length=50)
-    donnees_formulaire = models.JSONField()
-    email_reception = models.CharField(max_length=254, blank=True, null=True)
+    STATUT_CHOICES = (
+        ('brouillon', 'Brouillon'),
+        ('attente_formulaire', 'Attente formulaire'),
+        ('attente_paiement', 'Attente paiement'),
+        ('en_attente_traitement', 'En attente traitement'),
+        ('en_traitement', 'En traitement'),
+        ('document_envoye_email', 'Document envoyé par email'),
+        ('annule', 'Annulé'),
+    )
+
+    id = models.AutoField(primary_key=True)
+    reference = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    utilisateur = models.ForeignKey('utilisateurs.UtilisateursUser', on_delete=models.CASCADE)
+    document = models.ForeignKey('documents.DocumentsDocument', on_delete=models.CASCADE)
+    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='brouillon')
+    donnees_formulaire = models.JSONField(default=dict)
+    email_reception = models.EmailField(max_length=254, blank=True, null=True)
     montant_total = models.DecimalField(max_digits=10, decimal_places=2)
-    frais_commission = models.DecimalField(max_digits=10, decimal_places=2)
-    notaire = models.ForeignKey('NotairesNotaire', models.DO_NOTHING, blank=True, null=True)
+    frais_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notaire = models.ForeignKey('notaires.NotairesNotaire', on_delete=models.SET_NULL, blank=True, null=True)
     date_attribution = models.DateTimeField(blank=True, null=True)
     document_genere = models.CharField(max_length=200, blank=True, null=True)
     date_envoi_email = models.DateTimeField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
         db_table = 'demandes_demande'
-        db_table_comment = 'Workflow strict: brouillon → attente_formulaire → attente_paiement → en_attente_traitement → en_traitement → document_envoye_email'
+        verbose_name = 'Demande'
+        verbose_name_plural = 'Demandes'
+
+    def __str__(self):
+        return f"{self.reference or '-'} ({self.statut})"
