@@ -9,16 +9,48 @@ from django.db import models
 
 
 class ContactInformations(models.Model):
-    type = models.CharField(max_length=50)
+    TYPE_CHOICES = [
+        ('adresse', 'Adresse'),
+        ('telephone', 'Téléphone'),
+        ('email', 'Email'),
+        ('facebook', 'Facebook'),
+        ('tiktok', 'TikTok'),
+        ('linkedin', 'LinkedIn'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+    
+    type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     valeur = models.CharField(max_length=500)
-    ordre = models.IntegerField()
-    actif = models.BooleanField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        verbose_name="Latitude",
+        help_text="Pour affichage sur carte (Google Maps)"
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        verbose_name="Longitude",
+        help_text="Pour affichage sur carte (Google Maps)"
+    )
+    ordre = models.IntegerField(default=0)
+    actif = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
         db_table = 'contact_informations'
+        verbose_name = 'Information de Contact'
+        verbose_name_plural = 'Informations de Contact'
+        ordering = ['ordre', 'type']
+
+    def __str__(self):
+        return f"{self.get_type_display()}: {self.valeur}"
 
 
 class ContactMessage(models.Model):

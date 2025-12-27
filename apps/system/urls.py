@@ -13,6 +13,7 @@ router.register(r'api-keys', views.APIKeyViewSet, basename='api-key')
 router.register(r'tasks', views.ScheduledTaskViewSet, basename='scheduled-task')
 router.register(r'health', views.SystemHealthViewSet, basename='system-health')
 router.register(r'notifications', views.SystemNotificationViewSet, basename='notification')
+router.register(r'emails-professionnels', views.SystemEmailprofessionnelViewSet, basename='email-professionnel')
 
 # URLs personnalisées
 urlpatterns = [

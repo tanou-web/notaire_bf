@@ -1,11 +1,15 @@
 from rest_framework import viewsets, filters, status, permissions
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
-from .models import DemandesDemande
-from .serializers import DemandeSerializer, DemandeCreateSerializer
+from .models import DemandesDemande, DemandesPieceJointe
+from .serializers import (
+    DemandeSerializer, DemandeCreateSerializer,
+    PieceJointeSerializer, PieceJointeCreateSerializer
+)
 from apps.utilisateurs.permissions import IsOwnerOrReadOnly
 
 class DemandeViewSet(viewsets.ModelViewSet):
@@ -77,3 +81,40 @@ class DemandeViewSet(viewsets.ModelViewSet):
             'message': 'Document envoyé par email',
             'demande': DemandeSerializer(demande).data
         })
+
+
+class PieceJointeViewSet(viewsets.ModelViewSet):
+    """API pour les pièces jointes des demandes"""
+    queryset = DemandesPieceJointe.objects.all()
+    serializer_class = PieceJointeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['demande', 'type_piece']
+    ordering_fields = ['created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PieceJointeCreateSerializer
+        return PieceJointeSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        # Les utilisateurs voient seulement les pièces jointes de leurs demandes
+        if user.is_superuser or user.is_staff:
+            return DemandesPieceJointe.objects.all()
+        return DemandesPieceJointe.objects.filter(demande__utilisateur=user)
+    
+    def perform_create(self, serializer):
+        demande_id = serializer.validated_data.get('demande')
+        if not demande_id:
+            raise serializers.ValidationError({'demande': 'La demande est requise'})
+        
+        try:
+            demande = DemandesDemande.objects.get(id=demande_id.id if hasattr(demande_id, 'id') else demande_id)
+        except DemandesDemande.DoesNotExist:
+            raise serializers.ValidationError({'demande': 'Demande introuvable'})
+        
+        # Vérifier que l'utilisateur peut ajouter des pièces à cette demande
+        if not self.request.user.is_staff and demande.utilisateur != self.request.user:
+            raise permissions.PermissionDenied("Vous ne pouvez pas ajouter de pièce jointe à cette demande")
+        serializer.save()

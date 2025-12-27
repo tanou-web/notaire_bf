@@ -1,6 +1,10 @@
 # apps/organisation/serializers.py
 from rest_framework import serializers
-from .models import OrganisationMembrebureau
+from .models import (
+    OrganisationMembrebureau,
+    OrganisationHistorique,
+    OrganisationMission
+)
 
 class MembreBureauMinimalSerializer(serializers.ModelSerializer):
     """Serializer minimal pour les listes"""
@@ -42,6 +46,7 @@ class MembreBureauSerializer(serializers.ModelSerializer):
             'photo', 'photo_url',
             'ordre', 'actif',
             'telephone', 'email', 'biographie',
+            'mot_du_president',
             'date_entree', 'date_sortie',
             'mandat_debut', 'mandat_fin',
             'est_en_mandat',
@@ -67,7 +72,8 @@ class MembreBureauCreateSerializer(serializers.ModelSerializer):
         fields = [
             'nom', 'prenom', 'poste', 'photo',
             'ordre', 'actif', 'telephone', 'email',
-            'biographie', 'date_entree', 'date_sortie',
+            'biographie', 'mot_du_president',
+            'date_entree', 'date_sortie',
             'mandat_debut', 'mandat_fin'
         ]
 
@@ -78,7 +84,8 @@ class MembreBureauUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'nom', 'prenom', 'poste', 'photo',
             'ordre', 'actif', 'telephone', 'email',
-            'biographie', 'date_entree', 'date_sortie',
+            'biographie', 'mot_du_president',
+            'date_entree', 'date_sortie',
             'mandat_debut', 'mandat_fin'
         ]
 
@@ -89,3 +96,37 @@ class BureauStatsSerializer(serializers.Serializer):
     membres_en_mandat = serializers.IntegerField()
     repartition_par_poste = serializers.DictField()
     anciennete_moyenne = serializers.FloatField(help_text="En années")
+
+
+class OrganisationHistoriqueSerializer(serializers.ModelSerializer):
+    """Serializer pour l'historique"""
+    image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = OrganisationHistorique
+        fields = [
+            'id', 'titre', 'contenu', 'date_evenement',
+            'ordre', 'image', 'image_url', 'actif',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+
+class OrganisationMissionSerializer(serializers.ModelSerializer):
+    """Serializer pour les missions"""
+    
+    class Meta:
+        model = OrganisationMission
+        fields = [
+            'id', 'titre', 'description', 'icone',
+            'ordre', 'actif', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']

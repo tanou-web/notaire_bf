@@ -3,9 +3,16 @@ from .models import ContactInformations, ContactMessage
 
 
 class ContactInformationSerializer(serializers.ModelSerializer):
+	type_display = serializers.CharField(source='get_type_display', read_only=True)
+	
 	class Meta:
 		model = ContactInformations
-		fields = ['id', 'type', 'valeur', 'ordre', 'actif']
+		fields = [
+			'id', 'type', 'type_display', 'valeur',
+			'latitude', 'longitude', 'ordre', 'actif',
+			'created_at', 'updated_at'
+		]
+		read_only_fields = ['created_at', 'updated_at']
 
 
 class ContactMessageCreateSerializer(serializers.ModelSerializer):

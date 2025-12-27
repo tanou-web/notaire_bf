@@ -208,7 +208,7 @@ BASE_URL = os.getenv('BASE_URL', 'https://votre-domaine.com')
 
 SYSTEM_CONFIG = {
     'BACKUP_DIR': '/var/backups/app',
-    'ENCRYPTION_KEY': Fernet.generate_key(),  # À stocker dans les variables d'environnement
+    'ENCRYPTION_KEY': os.getenv('ENCRYPTION_KEY', ''),  # À stocker dans les variables d'environnement
     'LOG_RETENTION_DAYS': 90,
     'METRIC_RETENTION_DAYS': 30,
 }

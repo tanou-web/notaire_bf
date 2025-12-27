@@ -881,3 +881,68 @@ class SystemNotification(models.Model):
         if not self.expires_at:
             return False
         return timezone.now() > self.expires_at
+
+
+class SystemEmailprofessionnel(models.Model):
+    """Gestion des 10 emails professionnels (selon livrables cahier des charges)"""
+    
+    email = models.EmailField(
+        unique=True,
+        max_length=254,
+        verbose_name=_("Email professionnel"),
+        help_text=_("Email du domaine professionnel (ex: contact@notairesbf.com)")
+    )
+    
+    mot_de_passe = models.CharField(
+        max_length=200,
+        verbose_name=_("Mot de passe"),
+        help_text=_("Mot de passe crypté pour l'accès à la boîte mail")
+    )
+    
+    utilisateur = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='emails_professionnels',
+        verbose_name=_("Utilisateur associé"),
+        help_text=_("Utilisateur qui utilise cet email")
+    )
+    
+    alias_pour = models.EmailField(
+        blank=True,
+        null=True,
+        max_length=254,
+        verbose_name=_("Alias pour"),
+        help_text=_("Si cet email est un alias, indiquer l'email principal")
+    )
+    
+    actif = models.BooleanField(
+        default=True,
+        verbose_name=_("Actif"),
+        help_text=_("Si l'email est actuellement utilisé")
+    )
+    
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name=_("Description"),
+        help_text=_("Usage prévu de cet email (ex: 'Contact général', 'Support technique')")
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'system_emailprofessionnel'
+        verbose_name = _("Email professionnel")
+        verbose_name_plural = _("Emails professionnels")
+        ordering = ['email']
+
+    def __str__(self):
+        return f"{self.email} ({'Actif' if self.actif else 'Inactif'})"
+    
+    def est_alias(self):
+        """Vérifie si cet email est un alias"""
+        return self.alias_pour is not None

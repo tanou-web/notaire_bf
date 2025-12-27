@@ -2,11 +2,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    MembreBureauViewSet, BureauStatsAPIView, BureauPublicAPIView
+    MembreBureauViewSet, BureauStatsAPIView, BureauPublicAPIView,
+    HistoriqueViewSet, MissionViewSet
 )
 
 router = DefaultRouter()
 router.register(r'membres-bureau', MembreBureauViewSet, basename='membre-bureau')
+router.register(r'historique', HistoriqueViewSet, basename='historique')
+router.register(r'missions', MissionViewSet, basename='mission')
 
 urlpatterns = [
     # API REST standard

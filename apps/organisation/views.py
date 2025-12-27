@@ -7,11 +7,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q, Avg
 from datetime import date, timedelta
 
-from .models import OrganisationMembrebureau
+from .models import (
+    OrganisationMembrebureau,
+    OrganisationHistorique,
+    OrganisationMission
+)
 from .serializers import (
     MembreBureauSerializer, MembreBureauMinimalSerializer,
     MembreBureauCreateSerializer, MembreBureauUpdateSerializer,
-    BureauStatsSerializer
+    BureauStatsSerializer,
+    OrganisationHistoriqueSerializer,
+    OrganisationMissionSerializer
 )
 
 class MembreBureauViewSet(viewsets.ModelViewSet):
@@ -231,8 +237,49 @@ class BureauPublicAPIView(APIView):
         ).order_by('ordre')
         
         if conseillers.exists():
-            bureau_organise['conseillers'] = MembreBureauMinimalSerializer(
+                    bureau_organise['conseillers'] = MembreBureauMinimalSerializer(
                 conseillers, many=True, context={'request': request}
             ).data
         
         return Response(bureau_organise)
+
+
+class HistoriqueViewSet(viewsets.ModelViewSet):
+    """API pour l'historique de l'Ordre"""
+    queryset = OrganisationHistorique.objects.all()
+    serializer_class = OrganisationHistoriqueSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['actif']
+    search_fields = ['titre', 'contenu']
+    ordering_fields = ['ordre', 'date_evenement', 'created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Filtrer par défaut les éléments actifs pour le public
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(actif=True)
+        return queryset.order_by('ordre', 'date_evenement')
+
+
+class MissionViewSet(viewsets.ModelViewSet):
+    """API pour les missions de l'Ordre"""
+    queryset = OrganisationMission.objects.all()
+    serializer_class = OrganisationMissionSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['actif']
+    ordering_fields = ['ordre', 'titre']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Filtrer par défaut les missions actives pour le public
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(actif=True)
+        return queryset.order_by('ordre', 'titre')
+    
+    def get_permissions(self):
+        """Permissions différentes selon l'action"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DemandesDemande
+from .models import DemandesDemande, DemandesPieceJointe
 from apps.documents.serializers import DocumentSerializer
 from apps.utilisateurs.serializers import UserProfileSerializer
 from apps.notaires.serializers import NotaireSerializer
@@ -41,3 +41,51 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         validated_data['statut'] = 'brouillon'
         
         return super().create(validated_data)
+
+
+class PieceJointeSerializer(serializers.ModelSerializer):
+    """Serializer pour les pièces jointes"""
+    fichier_url = serializers.SerializerMethodField()
+    taille_formatee = serializers.CharField(source='taille_formatee', read_only=True)
+    type_piece_display = serializers.CharField(source='get_type_piece_display', read_only=True)
+    
+    class Meta:
+        model = DemandesPieceJointe
+        fields = [
+            'id', 'demande', 'type_piece', 'type_piece_display',
+            'fichier', 'fichier_url', 'nom_original',
+            'taille_fichier', 'taille_formatee', 'description',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'taille_fichier']
+    
+    def get_fichier_url(self, obj):
+        if obj.fichier:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.fichier.url)
+            return obj.fichier.url
+        return None
+
+
+class PieceJointeCreateSerializer(serializers.ModelSerializer):
+    """Serializer pour la création de pièces jointes"""
+    
+    class Meta:
+        model = DemandesPieceJointe
+        fields = ['demande', 'type_piece', 'fichier', 'description']
+    
+    def validate_fichier(self, value):
+        """Valider le fichier uploadé"""
+        max_size = 10 * 1024 * 1024  # 10 MB
+        allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+        
+        if value.size > max_size:
+            raise serializers.ValidationError("Le fichier est trop volumineux (max 10 MB)")
+        
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError(
+                "Type de fichier non autorisé. Types acceptés: PDF, JPG, PNG"
+            )
+        
+        return value

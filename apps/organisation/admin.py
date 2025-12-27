@@ -1,7 +1,11 @@
 # apps/organisation/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import OrganisationMembrebureau
+from .models import (
+    OrganisationMembrebureau,
+    OrganisationHistorique,
+    OrganisationMission
+)
 
 @admin.register(OrganisationMembrebureau)
 class MembreBureauAdmin(admin.ModelAdmin):
@@ -95,3 +99,37 @@ class MembreBureauAdmin(admin.ModelAdmin):
         queryset.update(actif=False)
         self.message_user(request, f"{queryset.count()} membre(s) désactivé(s)")
     desactiver_selection.short_description = "Désactiver les membres sélectionnés"
+
+
+@admin.register(OrganisationHistorique)
+class HistoriqueAdmin(admin.ModelAdmin):
+    """Admin pour l'historique"""
+    list_display = ['titre', 'date_evenement', 'ordre', 'actif', 'created_at']
+    list_filter = ['actif', 'date_evenement']
+    search_fields = ['titre', 'contenu']
+    ordering = ['ordre', 'date_evenement']
+    fieldsets = (
+        ('Contenu', {
+            'fields': ('titre', 'contenu', 'date_evenement', 'image')
+        }),
+        ('Affichage', {
+            'fields': ('ordre', 'actif')
+        }),
+    )
+
+
+@admin.register(OrganisationMission)
+class MissionAdmin(admin.ModelAdmin):
+    """Admin pour les missions"""
+    list_display = ['titre', 'icone', 'ordre', 'actif', 'created_at']
+    list_filter = ['actif']
+    search_fields = ['titre', 'description']
+    ordering = ['ordre', 'titre']
+    fieldsets = (
+        ('Contenu', {
+            'fields': ('titre', 'description', 'icone')
+        }),
+        ('Affichage', {
+            'fields': ('ordre', 'actif')
+        }),
+    )

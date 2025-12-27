@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     SystemConfig, SystemLog, MaintenanceWindow, SystemMetric,
-    APIKey, ScheduledTask, SystemHealth, SystemNotification
+    APIKey, ScheduledTask, SystemHealth, SystemNotification,
+    SystemEmailprofessionnel
 )
 import json
 
@@ -253,3 +254,27 @@ class SystemAlertSerializer(serializers.Serializer):
     timestamp = serializers.DateTimeField()
     details = serializers.DictField()
     action_required = serializers.BooleanField()
+
+
+class SystemEmailprofessionnelSerializer(serializers.ModelSerializer):
+    """Serializer pour les emails professionnels."""
+    
+    utilisateur_display = serializers.SerializerMethodField()
+    est_alias = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = SystemEmailprofessionnel
+        fields = [
+            'id', 'email', 'mot_de_passe', 'utilisateur', 'utilisateur_display',
+            'alias_pour', 'actif', 'description', 'est_alias',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+        extra_kwargs = {
+            'mot_de_passe': {'write_only': True}
+        }
+    
+    def get_utilisateur_display(self, obj):
+        if obj.utilisateur:
+            return f"{obj.utilisateur.nom} {obj.utilisateur.prenom}" or obj.utilisateur.username
+        return None()
