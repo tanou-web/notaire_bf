@@ -22,7 +22,7 @@ class DocumentFilter(django_filters.FilterSet):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = DocumentsDocument.objects.all().order_by('nom')
     serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAdminUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = DocumentFilter
     search_fields = ['reference', 'nom', 'description']
@@ -30,11 +30,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
     ordering = ['nom']
 
     def get_permissions(self):
-        """Seuls les admins peuvent créer/modifier/supprimer des documents"""
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAdminUser()]
-        return super().get_permissions()
-    
+        return [permission() for permission in super().get_permissions()]
+
     def get_queryset(self):
         """Par défaut, ne montrer que les documents actifs pour les utilisateurs non authentifiés"""
         queryset = super().get_queryset()

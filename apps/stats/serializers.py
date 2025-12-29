@@ -5,9 +5,13 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, timedelta
 import re
 
+
 from .models import (
-    StatsVisite, PageVue, Referent, PaysVisite, 
-    PeriodeActive, Appareil, Navigateur
+    StatsVisite,    
+    PageVue,        
+    Referent,       
+    PaysVisite,     
+    PeriodeActive   
 )
 
 
@@ -469,124 +473,6 @@ class PeriodeActiveSerializer(serializers.ModelSerializer):
         
         return data
 
-
-class AppareilSerializer(serializers.ModelSerializer):
-    """Serializer pour les types d'appareils."""
-    
-    type_appareil = serializers.CharField(
-        max_length=50,
-        help_text="Type d'appareil (mobile, desktop, tablet)"
-    )
-    
-    systeme_exploitation = serializers.CharField(
-        max_length=100,
-        help_text="Système d'exploitation"
-    )
-    
-    visites = serializers.IntegerField(
-        validators=[MinValueValidator(0)],
-        help_text="Nombre de visites avec cet appareil"
-    )
-    
-    # Champs calculés
-    pourcentage_total = serializers.SerializerMethodField(read_only=True)
-    icone_appareil = serializers.SerializerMethodField(read_only=True)
-    
-    class Meta:
-        model = Appareil
-        fields = [
-            'id', 'date', 'type_appareil', 'systeme_exploitation',
-            'visites', 'pourcentage_total', 'icone_appareil',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def get_pourcentage_total(self, obj):
-        """Calcule le pourcentage d'utilisation de cet appareil."""
-        try:
-            total_appareils_jour = Appareil.objects.filter(
-                date=obj.date
-            ).aggregate(total=Sum('visites'))['total'] or 0
-            
-            if total_appareils_jour > 0:
-                return round((obj.visites / total_appareils_jour) * 100, 2)
-        except:
-            pass
-        return 0.0
-    
-    def get_icone_appareil(self, obj):
-        """Retourne une icône selon le type d'appareil."""
-        icones = {
-            'mobile': '📱',
-            'desktop': '💻',
-            'tablet': '📱',
-            'tv': '📺',
-            'bot': '🤖'
-        }
-        return icones.get(obj.type_appareil.lower(), '📱')
-
-
-class NavigateurSerializer(serializers.ModelSerializer):
-    """Serializer pour les navigateurs."""
-    
-    nom = serializers.CharField(
-        max_length=100,
-        help_text="Nom du navigateur"
-    )
-    
-    version = serializers.CharField(
-        max_length=50,
-        help_text="Version du navigateur"
-    )
-    
-    visites = serializers.IntegerField(
-        validators=[MinValueValidator(0)],
-        help_text="Nombre de visites avec ce navigateur"
-    )
-    
-    # Champs calculés
-    pourcentage_total = serializers.SerializerMethodField(read_only=True)
-    icone_navigateur = serializers.SerializerMethodField(read_only=True)
-    
-    class Meta:
-        model = Navigateur
-        fields = [
-            'id', 'date', 'nom', 'version', 'visites',
-            'pourcentage_total', 'icone_navigateur',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def get_pourcentage_total(self, obj):
-        """Calcule le pourcentage d'utilisation de ce navigateur."""
-        try:
-            total_navigateurs_jour = Navigateur.objects.filter(
-                date=obj.date
-            ).aggregate(total=Sum('visites'))['total'] or 0
-            
-            if total_navigateurs_jour > 0:
-                return round((obj.visites / total_navigateurs_jour) * 100, 2)
-        except:
-            pass
-        return 0.0
-    
-    def get_icone_navigateur(self, obj):
-        """Retourne une icône selon le navigateur."""
-        navigateur = obj.nom.lower()
-        if 'chrome' in navigateur:
-            return '🌐'
-        elif 'firefox' in navigateur:
-            return '🦊'
-        elif 'safari' in navigateur:
-            return '🍎'
-        elif 'edge' in navigateur:
-            return '🔷'
-        elif 'opera' in navigateur:
-            return '🎭'
-        else:
-            return '🌐'
-
-
 class DashboardSerializer(serializers.Serializer):
     """Serializer pour les données du tableau de bord."""
     
@@ -613,50 +499,6 @@ class DashboardSerializer(serializers.Serializer):
     derniere_mise_a_jour = serializers.DateTimeField(
         help_text="Date de la dernière mise à jour"
     )
-
-
-class TendancesSerializer(serializers.Serializer):
-    """Serializer pour les données de tendances."""
-    
-    periode = serializers.CharField(
-        help_text="Période analysée"
-    )
-    
-    jours = serializers.IntegerField(
-        help_text="Nombre de jours analysés"
-    )
-    
-    metrique = serializers.CharField(
-        help_text="Métrique analysée"
-    )
-    
-    labels = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="Labels pour l'axe X"
-    )
-    
-    data = serializers.ListField(
-        child=serializers.FloatField(),
-        help_text="Données pour l'axe Y"
-    )
-    
-    evolution = serializers.FloatField(
-        help_text="Évolution en pourcentage"
-    )
-    
-    moyenne = serializers.FloatField(
-        help_text="Moyenne sur la période"
-    )
-    
-    maximum = serializers.FloatField(
-        help_text="Valeur maximale"
-    )
-    
-    minimum = serializers.FloatField(
-        help_text="Valeur minimale"
-    )
-
-
 class RapportSerializer(serializers.Serializer):
     """Serializer pour la génération de rapports."""
     

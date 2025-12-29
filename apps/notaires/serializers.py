@@ -1,27 +1,112 @@
-from django.conf import settings
+# apps/notaires/serializers.py - COPIER-COLLER CE CODE
 from rest_framework import serializers
-from .models import NotairesNotaire
+from .models import NotairesNotaire, NotairesCotisation
 
-
-class NotaireSerializer(serializers.ModelSerializer):
-    region_nom = serializers.CharField(source='region.nom', read_only=True)
-    ville_nom = serializers.CharField(source='ville.nom', read_only=True)
-    photo_url = serializers.SerializerMethodField()
-
+class NotaireMinimalSerializer(serializers.ModelSerializer):
+    """Serializer minimal pour les listes (performant)"""
+    region_nom = serializers.CharField(source='region.nom', read_only=True, allow_null=True)
+    ville_nom = serializers.CharField(source='ville.nom', read_only=True, allow_null=True)
+    nom_complet = serializers.SerializerMethodField()
+    
     class Meta:
         model = NotairesNotaire
-        fields = ['id', 'matricule', 'nom', 'prenom', 'email', 'telephone', 'region', 'region_nom', 'ville', 'ville_nom', 'adresse', 'photo', 'photo_url', 'actif', 'total_ventes', 'total_cotisations']
+        fields = [
+            'id', 'matricule', 'nom', 'prenom', 'nom_complet', 'photo',
+            'telephone', 'email', 'region_nom', 'ville_nom',
+            'adresse', 'actif', 'total_ventes'
+        ]
+    
+    def get_nom_complet(self, obj):
+        return f"{obj.nom} {obj.prenom}"
 
-    def get_photo_url(self, obj):
-        if not obj.photo:
-            return None
-        
-        if obj.photo.startswith('http'):
-            return obj.photo
-        
-        request = self.context.get('request')
-        media_url = settings.MEDIA_URL.rstrip('/')
+class NotaireSerializer(serializers.ModelSerializer):
+    """Serializer complet pour les détails d'un notaire"""
+    region_nom = serializers.CharField(source='region.nom', read_only=True, allow_null=True)
+    ville_nom = serializers.CharField(source='ville.nom', read_only=True, allow_null=True)
+    nom_complet = serializers.SerializerMethodField()
+    nombre_demandes = serializers.SerializerMethodField()
+    demandes_en_cours = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = NotairesNotaire
+        fields = [
+            'id', 'matricule', 'nom', 'prenom', 'nom_complet', 'photo',
+            'telephone', 'email', 'adresse',
+            'region', 'region_nom',
+            'ville', 'ville_nom',
+            'actif', 'created_at', 'updated_at',
+            'total_ventes', 'total_cotisations',
+            'nombre_demandes', 'demandes_en_cours'
+        ]
+        read_only_fields = [
+            'created_at', 'updated_at',
+            'total_ventes', 'total_cotisations'
+        ]
+    
+    def get_nom_complet(self, obj):
+        return f"{obj.nom} {obj.prenom}"
+    
+    def get_nombre_demandes(self, obj):
+        try:
+            from apps.ventes.models import Demande
+            return Demande.objects.filter(notaire=obj).count()
+        except ImportError:
+            return 0
+    
+    def get_demandes_en_cours(self, obj):
+        try:
+            from apps.ventes.models import Demande
+            return Demande.objects.filter(
+                notaire=obj, 
+                statut__in=['en_traitement', 'en_attente_notaire']
+            ).count()
+        except ImportError:
+            return 0
 
-        if request:
-            return request.build_absolute_uri(f'{media_url}/{obj.photo.lstrip('/')}')
-        return f'{media_url}/{obj.photo.lstrip('/')}'
+class NotaireCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotairesNotaire
+        fields = [
+            'matricule', 'nom', 'prenom', 'photo',
+            'telephone', 'email', 'adresse',
+            'region', 'ville'
+        ]
+    
+    def create(self, validated_data):
+        validated_data['actif'] = True
+        return super().create(validated_data)
+
+class NotaireUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotairesNotaire
+        fields = [
+            'nom', 'prenom', 'photo', 'telephone',
+            'email', 'adresse', 'region', 'ville',
+            'actif'
+        ]
+
+class NotaireStatsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nom_complet = serializers.CharField()
+    matricule = serializers.CharField()
+    region = serializers.CharField(source='region.nom', allow_null=True)
+    ville = serializers.CharField(source='ville.nom', allow_null=True)
+    total_demandes = serializers.IntegerField(default=0)
+    demandes_terminees = serializers.IntegerField(default=0)
+    demandes_en_cours = serializers.IntegerField(default=0)
+    montant_total_ventes = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
+    taux_completion = serializers.FloatField(default=0)
+    derniere_activite = serializers.DateTimeField(allow_null=True)
+
+class CotisationSerializer(serializers.ModelSerializer):
+    notaire_nom = serializers.CharField(source='notaire.nom_complet', read_only=True)
+    notaire_matricule = serializers.CharField(source='notaire.matricule', read_only=True)
+    
+    class Meta:
+        model = NotairesCotisation
+        fields = [
+            'id', 'notaire', 'notaire_nom', 'notaire_matricule',
+            'annee', 'montant', 'statut', 'date_paiement',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']

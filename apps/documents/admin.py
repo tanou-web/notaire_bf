@@ -41,17 +41,14 @@ class DocumentsTextelegalAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Informations', {
-            'fields': ('type_texte', 'reference', 'titre', 'fichier', 'date_publication', 'ordre')
+            'fields': ('type_texte', 'reference', 'titre')
         }),
         ('Fichier et date', {
             'fields': ('fichier', 'date_publication'),
         }),
-        ('Dates', {
-            'fields': ('created_at', 'updated_at'),
+        ('Ordre d\'affichage et dates', {
+            'fields': ('ordre', 'created_at', 'updated_at'),
             'classes': ('collapse',)
-        }),
-        ('Ordre d\'affichage', {
-            'fields': ('ordre',),
         }),
     )
 
@@ -61,6 +58,6 @@ class DocumentsTextelegalAdmin(admin.ModelAdmin):
 
     def fichier_lien(self, obj):
         if obj.fichier:
-            return format_html('<a href="{}" target="_blank">Télécharger</a>', obj.fichier)
+            return format_html('<a href="{}" target="_blank">Télécharger</a>', obj.fichier.url)
         return "Aucun fichier"
     fichier_lien.short_description = 'Fichier'

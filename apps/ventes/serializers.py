@@ -1,527 +1,527 @@
 # apps/ventes/serializers.py
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
+from django.core.validators import EmailValidator, RegexValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
-from decimal import Decimal
-from .models import (
-    VentesSticker, Client, Demande, LigneDemande,
-    VentesFacture, Paiement, Panier, ItemPanier,
-    AvisClient, CodePromo
-)
+from datetime import timedelta
+import re
+import uuid
+
+from .models import VenteSticker, Demande, Paiement, AvisClient, CodePromo
+
+
 
 # ========================================
-# SERIALIZERS STICKERS
+# 1. SERIALIZERS STICKERS
 # ========================================
 
 class VentesStickerSerializer(serializers.ModelSerializer):
-    """Serializer complet pour les stickers"""
-    prix_ttc = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    dimensions = serializers.CharField(read_only=True)
-    surface_cm2 = serializers.FloatField(read_only=True)
-    besoin_reapprovisionnement = serializers.BooleanField(read_only=True)
-    niveau_stock = serializers.FloatField(read_only=True)
-    image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = VentesSticker
-        fields = '__all__'
-        read_only_fields = [
-            'created_at', 'updated_at', 'date_derniere_vente',
-            'prix_ttc', 'dimensions', 'surface_cm2',
-            'besoin_reapprovisionnement', 'niveau_stock'
-        ]
-    
-    def get_image_url(self, obj):
-        if obj.image_principale:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image_principale.url)
-            return obj.image_principale.url
-        return None
-    
-    def validate_prix_ht(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Le prix HT doit être positif")
-        return value
-    
-    def validate_quantite(self, value):
-        if value < 0:
-            raise serializers.ValidationError("La quantité ne peut pas être négative")
-        return value
-
-class VentesStickerMinimalSerializer(serializers.ModelSerializer):
-    """Serializer minimal pour les listes de stickers"""
+    """
+    Serializer pour la lecture des stickers
+    """
     prix_ttc = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    image_url = serializers.SerializerMethodField()
+    en_stock = serializers.BooleanField(source='disponible', read_only=True)
     
     class Meta:
-        model = VentesSticker
+        model = VenteSticker
         fields = [
-            'id', 'code', 'nom', 'type_sticker',
-            'prix_ht', 'prix_ttc', 'image_principale', 'image_url',
-            'quantite', 'categorie', 'est_populaire', 'est_nouveau',
-            'actif'
+            'id', 'code', 'nom', 'description', 
+            'prix_ht', 'prix_ttc', 'quantite',
+            'en_stock', 'actif', 'image_principale'
         ]
-    
-    def get_image_url(self, obj):
-        if obj.image_principale:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image_principale.url)
-            return obj.image_principale.url
-        return None
+        read_only_fields = ['id', 'prix_ttc', 'en_stock']
 
-class VentesStickerCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour la création de stickers"""
-    code = serializers.CharField(
-        max_length=50,
-        validators=[UniqueValidator(queryset=VentesSticker.objects.all())]
-    )
-    
+
+class VenteStickerCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la création d'une vente de sticker
+    """
     class Meta:
-        model = VentesSticker
+        model = VenteSticker
         fields = [
-            'code', 'nom', 'description', 'type_sticker', 'materiau',
-            'largeur_mm', 'hauteur_mm', 'forme', 'prix_ht', 'taux_tva',
-            'quantite', 'stock_minimum', 'stock_securite',
-            'est_personnalisable', 'delai_personnalisation',
-            'image_principale', 'categorie', 'tags',
-            'poids_g', 'actif', 'est_populaire', 'est_nouveau'
+            'sticker', 'quantite', 
+            'client_nom', 'client_email', 'client_contact',
+            'notaire'
         ]
-    
-    def create(self, validated_data):
-        # Générer automatiquement le code-barres
-        validated_data['code_barres'] = f"STK{validated_data['code'].replace('-', '').zfill(10)}"
-        return super().create(validated_data)
-
-# ========================================
-# SERIALIZERS CLIENTS
-# ========================================
-
-class ClientSerializer(serializers.ModelSerializer):
-    """Serializer complet pour les clients"""
-    nom_complet = serializers.CharField(read_only=True)
-    est_fidele = serializers.BooleanField(read_only=True)
-    moyenne_panier = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    
-    class Meta:
-        model = Client
-        fields = '__all__'
-        read_only_fields = [
-            'code_client', 'created_at', 'updated_at',
-            'date_premier_achat', 'date_dernier_achat',
-            'montant_total_achats', 'nombre_commandes',
-            'points_fidelite', 'nom_complet', 'est_fidele',
-            'moyenne_panier'
-        ]
-    
-    def validate_email(self, value):
-        """Vérifie que l'email est unique"""
-        if Client.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Un client avec cet email existe déjà")
-        return value
-
-class ClientMinimalSerializer(serializers.ModelSerializer):
-    """Serializer minimal pour les listes de clients"""
-    nom_complet = serializers.CharField(read_only=True)
-    
-    class Meta:
-        model = Client
-        fields = [
-            'id', 'code_client', 'nom_complet', 'email',
-            'telephone', 'type_client', 'entreprise',
-            'ville', 'est_actif', 'points_fidelite'
-        ]
-
-class ClientCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour la création de clients"""
-    email = serializers.EmailField(
-        validators=[UniqueValidator(queryset=Client.objects.all())]
-    )
-    
-    class Meta:
-        model = Client
-        fields = [
-            'nom', 'prenom', 'email', 'telephone',
-            'type_client', 'adresse', 'ville', 'code_postal', 'pays',
-            'entreprise', 'siret', 'tva_intracom',
-            'newsletter', 'notes'
-        ]
-    
-    def create(self, validated_data):
-        # Générer automatiquement le code client
-        from datetime import datetime
-        date_str = datetime.now().strftime('%Y%m%d')
-        count = Client.objects.filter(
-            created_at__date=datetime.now().date()
-        ).count() + 1
-        validated_data['code_client'] = f"CLI-{date_str}-{count:04d}"
-        
-        validated_data['est_actif'] = True
-        return super().create(validated_data)
-
-# ========================================
-# SERIALIZERS LIGNES DE DEMANDE
-# ========================================
-
-class LigneDemandeSerializer(serializers.ModelSerializer):
-    """Serializer pour les lignes de demande"""
-    sticker_details = VentesStickerMinimalSerializer(
-        source='sticker', 
-        read_only=True
-    )
-    prix_unitaire_ttc = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    montant_ht = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    montant_tva = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    montant_ttc = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    
-    class Meta:
-        model = LigneDemande
-        fields = [
-            'id', 'demande', 'sticker', 'sticker_details',
-            'quantite', 'prix_unitaire_ht', 'prix_unitaire_ttc',
-            'taux_tva', 'montant_ht', 'montant_tva', 'montant_ttc',
-            'texte_personnalise', 'couleur_personnalisee',
-            'fichier_personnalisation'
-        ]
-        read_only_fields = [
-            'prix_unitaire_ht', 'taux_tva',
-            'montant_ht', 'montant_tva', 'montant_ttc'
-        ]
-
-class LigneDemandeCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour créer une ligne de demande"""
-    class Meta:
-        model = LigneDemande
-        fields = ['sticker', 'quantite', 'texte_personnalise', 'couleur_personnalisee']
     
     def validate(self, data):
-        # Vérifier le stock
-        sticker = data['sticker']
-        quantite = data['quantite']
+        # Normaliser l'email
+        if 'client_email' in data and data['client_email']:
+            data['client_email'] = data['client_email'].lower().strip()
         
-        if sticker.quantite < quantite:
-            raise serializers.ValidationError(
-                f"Stock insuffisant. Disponible: {sticker.quantite}, Demande: {quantite}"
+        # Normaliser le contact téléphonique
+        if 'client_contact' in data and data['client_contact']:
+            # Garder uniquement les chiffres
+            data['client_contact'] = ''.join(
+                c for c in str(data['client_contact']) if c.isdigit()
             )
+            
+            # Validation format Burkinabè
+            phone = data['client_contact']
+            if len(phone) == 9 and phone.startswith('0'):
+                # Format 0XXXXXXXX → +226XXXXXXXX
+                data['client_contact'] = '+226' + phone[1:]
+            elif len(phone) == 8:
+                # Format XXXXXXXX → +226XXXXXXXX
+                data['client_contact'] = '+226' + phone
         
-        # Définir automatiquement le prix et la TVA
-        data['prix_unitaire_ht'] = sticker.prix_ht
-        data['taux_tva'] = sticker.taux_tva
+        # Validation de la quantité
+        if 'quantite' in data and data['quantite'] <= 0:
+            raise serializers.ValidationError({
+                'quantite': 'La quantité doit être supérieure à 0'
+            })
         
         return data
+    
+    def validate_quantite(self, value):
+        """
+        Validation spécifique de la quantité
+        """
+        if value < 1:
+            raise serializers.ValidationError("La quantité minimale est 1")
+        if value > 100:
+            raise serializers.ValidationError("La quantité maximale est 100")
+        return value
+    
+    def validate_client_email(self, value):
+        """
+        Validation de l'email
+        """
+        if value:
+            validator = EmailValidator()
+            try:
+                validator(value)
+            except DjangoValidationError:
+                raise serializers.ValidationError("Adresse email invalide")
+        return value
+
 
 # ========================================
-# SERIALIZERS DEMANDES
+# 2. SERIALIZERS DEMANDES
 # ========================================
-
-class DemandeSerializer(serializers.ModelSerializer):
-    """Serializer complet pour les demandes"""
-    client_details = ClientMinimalSerializer(source='client', read_only=True)
-    lignes = LigneDemandeSerializer(many=True, read_only=True)
-    montant_restant = serializers.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        read_only=True
-    )
-    est_soldee = serializers.BooleanField(read_only=True)
-    delai_livraison = serializers.IntegerField(read_only=True)
-    created_by_details = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Demande
-        fields = '__all__'
-        read_only_fields = [
-            'numero', 'created_at', 'updated_at',
-            'date_confirmation', 'date_expedition', 'date_livraison',
-            'sous_total_ht', 'montant_tva', 'montant_total_ttc',
-            'montant_paye', 'montant_restant', 'est_soldee',
-            'delai_livraison', 'created_by'
-        ]
-    
-    def get_created_by_details(self, obj):
-        if obj.created_by:
-            return {
-                'id': obj.created_by.id,
-                'email': obj.created_by.email,
-                'username': obj.created_by.username
-            }
-        return None
 
 class DemandeCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour créer une demande"""
-    lignes = LigneDemandeCreateSerializer(many=True, write_only=True)
+    """
+    Serializer pour la création d'une demande SANS COMPTE
+    """
+    code_promo = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Demande
         fields = [
-            'client', 'mode_livraison', 'adresse_livraison',
-            'mode_paiement', 'notes_client', 'lignes'
+            'document', 'client_nom', 'client_email', 
+            'client_contact', 'description', 'code_promo'
         ]
+    
+    def validate(self, data):
+        # Normaliser l'email
+        if 'client_email' in data and data['client_email']:
+            data['client_email'] = data['client_email'].lower().strip()
+        
+        # Normaliser le contact téléphonique
+        if 'client_contact' in data and data['client_contact']:
+            phone = ''.join(c for c in str(data['client_contact']) if c.isdigit())
+            data['client_contact'] = self._normaliser_telephone(phone)
+        
+        return data
+    
+    def _normaliser_telephone(self, phone):
+        """
+        Normaliser le numéro de téléphone au format international
+        """
+        if not phone:
+            return phone
+        
+        if len(phone) == 9 and phone.startswith('0'):
+            # Format 0XXXXXXXX → +226XXXXXXXX
+            return '+226' + phone[1:]
+        elif len(phone) == 8:
+            # Format XXXXXXXX → +226XXXXXXXX
+            return '+226' + phone
+        elif phone.startswith('226') and len(phone) == 11:
+            # Format 226XXXXXXXX → +226XXXXXXXX
+            return '+' + phone
+        elif phone.startswith('00226') and len(phone) == 14:
+            # Format 00226XXXXXXXX → +226XXXXXXXX
+            return '+226' + phone[5:]
+        
+        # Si déjà format +226...
+        if phone.startswith('+226') and len(phone) == 12:
+            return phone
+        
+        # Autres formats non reconnus
+        return phone
+    
+    def validate_client_email(self, value):
+        """
+        Validation de l'email
+        """
+        if value:
+            validator = EmailValidator()
+            try:
+                validator(value)
+            except DjangoValidationError:
+                raise serializers.ValidationError("Adresse email invalide")
+        return value
+    
+    def validate_client_contact(self, value):
+        """
+        Validation du numéro de téléphone Burkinabè
+        """
+        if value:
+            # Nettoyer le numéro
+            phone = ''.join(c for c in str(value) if c.isdigit())
+            
+            # Vérifier si c'est un format Burkinabè valide
+            patterns = [
+                r'^226[0-9]{8}$',      # 226XXXXXXXX
+                r'^0[0-9]{8}$',        # 0XXXXXXXX
+                r'^\+226[0-9]{8}$',    # +226XXXXXXXX
+                r'^00226[0-9]{8}$',    # 00226XXXXXXXX
+            ]
+            
+            valid = any(re.match(pattern, phone) for pattern in patterns)
+            if not valid:
+                raise serializers.ValidationError(
+                    "Numéro de téléphone invalide. Format attendu: 0XXXXXXXX ou +226XXXXXXXX"
+                )
+        
+        return value
     
     def create(self, validated_data):
-        lignes_data = validated_data.pop('lignes')
-        request = self.context.get('request')
+        """
+        Création avec génération automatique des champs
+        """
+        # Extraire le code promo si présent
+        code_promo = validated_data.pop('code_promo', None)
         
-        # Créer la demande
-        demande = Demande.objects.create(
-            **validated_data,
-            created_by=request.user if request and request.user.is_authenticated else None
+        # Calculer le montant
+        document = validated_data.get('document')
+        montant_base = document.prix_ttc if document else 0
+        
+        # Appliquer réduction si code promo valide
+        montant_final = montant_base
+        reduction_appliquee = 0
+        
+        if code_promo:
+            from .services import CodePromoService
+            try:
+                promo = CodePromoService.valider_code_promo(
+                    code=code_promo,
+                    type_utilisateur='client_externe'
+                )
+                if promo:
+                    reduction_appliquee = (montant_base * promo.pourcentage_reduction) / 100
+                    montant_final = montant_base - reduction_appliquee
+                    validated_data['code_promo_applique'] = promo
+            except DjangoValidationError:
+                pass  # Code invalide, on ignore
+        
+        # Ajouter les champs calculés
+        validated_data['montant_total'] = montant_final
+        validated_data['montant_base'] = montant_base
+        validated_data['reduction_appliquee'] = reduction_appliquee
+        
+        # Générer les tokens et références
+        validated_data['reference'] = f"DEM-{uuid.uuid4().hex[:8].upper()}"
+        validated_data['token_acces'] = uuid.uuid4()
+        validated_data['token_expire'] = timezone.now() + timedelta(days=7)
+        
+        # Ajouter informations de suivi
+        request = self.context.get('request')
+        if request:
+            validated_data['ip_address'] = self._get_client_ip(request)
+            validated_data['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        # Générer le lien de suivi
+        validated_data['lien_suivi'] = (
+            f"{self.context.get('frontend_url', '')}/suivi/"
+            f"{validated_data['token_acces']}"
         )
         
-        # Créer les lignes de demande
-        for ligne_data in lignes_data:
-            LigneDemande.objects.create(demande=demande, **ligne_data)
-        
-        # Calculer les totaux
-        demande.calculer_totaux()
-        
-        return demande
+        return super().create(validated_data)
+    
+    def _get_client_ip(self, request):
+        """
+        Récupérer l'adresse IP du client
+        """
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        if xff:
+            return xff.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR', '')
 
-class DemandeUpdateSerializer(serializers.ModelSerializer):
-    """Serializer pour mettre à jour une demande"""
+
+class DemandeSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la lecture des demandes
+    """
+    nom_complet_client = serializers.CharField(read_only=True)
+    token_valide = serializers.BooleanField(read_only=True)
+    est_payee = serializers.BooleanField(read_only=True)
+    lien_suivi = serializers.CharField(read_only=True)
+    document_nom = serializers.CharField(source='document.nom', read_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    
     class Meta:
         model = Demande
         fields = [
-            'statut', 'mode_livraison', 'frais_livraison',
-            'adresse_livraison', 'transporteur', 'numero_suivi',
-            'mode_paiement', 'statut_paiement', 'reference_paiement',
-            'date_paiement', 'remise', 'notes_client', 'notes_interne'
+            'id', 'reference', 'nom_complet_client', 
+            'document', 'document_nom',
+            'client_email', 'client_contact',
+            'statut', 'statut_display',
+            'montant_total', 'montant_base', 'reduction_appliquee',
+            'est_payee', 'token_acces', 'token_valide', 'lien_suivi',
+            'notaire_nom_complet', 'created_at', 'updated_at'
         ]
-    
-    def update(self, instance, validated_data):
-        # Si le statut change à "confirmée", appeler la méthode confirmer
-        if 'statut' in validated_data and validated_data['statut'] == 'confirmee':
-            if instance.statut == 'brouillon':
-                instance.confirmer()
-                validated_data.pop('statut')  # Ne pas mettre à jour deux fois
-        
-        return super().update(instance, validated_data)
+        read_only_fields = fields
+
 
 # ========================================
-# SERIALIZERS FACTURES
-# ========================================
-
-class VentesFactureSerializer(serializers.ModelSerializer):
-    """Serializer pour les factures"""
-    demande_details = DemandeSerializer(source='demande', read_only=True)
-    client_details = ClientMinimalSerializer(source='client', read_only=True)
-    montant_restant = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True
-    )
-    est_retard = serializers.BooleanField(read_only=True)
-    fichier_pdf_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = VentesFacture
-        fields = '__all__'
-        read_only_fields = [
-            'numero', 'created_at', 'updated_at',
-            'date_paiement', 'montant_paye', 'montant_restant',
-            'est_retard', 'fichier_pdf', 'fichier_xml',
-            'created_by'
-        ]
-    
-    def get_fichier_pdf_url(self, obj):
-        if obj.fichier_pdf:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.fichier_pdf.url)
-            return obj.fichier_pdf.url
-        return None
-
-# ========================================
-# SERIALIZERS PAIEMENTS
+# 3. SERIALIZERS PAIEMENTS
 # ========================================
 
 class PaiementSerializer(serializers.ModelSerializer):
-    """Serializer pour les paiements"""
-    facture_details = VentesFactureSerializer(source='facture', read_only=True)
-    client_details = ClientMinimalSerializer(source='client', read_only=True)
+    """
+    Serializer pour les paiements
+    """
+    type_transaction = serializers.CharField(read_only=True)
+    reference_transaction = serializers.CharField(read_only=True)
     
-    class Meta:
-        model = Paiement
-        fields = '__all__'
-        read_only_fields = [
-            'reference', 'date_enregistrement', 'created_by', 'updated_at'
-        ]
-
-class PaiementCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour créer un paiement"""
     class Meta:
         model = Paiement
         fields = [
-            'facture', 'client', 'mode', 'montant', 
-            'date_paiement', 'numero_cheque', 'banque',
-            'reference_virement', 'notes'
+            'id', 'reference', 'montant', 'type_paiement',
+            'type_transaction', 'reference_transaction',
+            'statut', 'date_creation', 'date_validation'
         ]
+        read_only_fields = fields
+    
+    def get_type_transaction(self, obj):
+        """
+        Déterminer le type de transaction (demande ou vente_sticker)
+        """
+        if obj.demande:
+            return 'demande'
+        elif obj.vente_sticker:
+            return 'vente_sticker'
+        return 'inconnu'
+    
+    def get_reference_transaction(self, obj):
+        """
+        Récupérer la référence de la transaction liée
+        """
+        if obj.demande:
+            return obj.demande.reference
+        elif obj.vente_sticker:
+            return obj.vente_sticker.reference
+        return ''
+
+
+class PaiementInitierSerializer(serializers.Serializer):
+    """
+    Serializer pour initier un paiement
+    """
+    type_transaction = serializers.ChoiceField(
+        choices=['demande', 'vente_sticker']
+    )
+    reference = serializers.CharField(max_length=50)
+    type_paiement = serializers.ChoiceField(
+        choices=['orange_money', 'mtn_money', 'carte_bancaire', 'especes'],
+        default='orange_money'
+    )
     
     def validate(self, data):
-        # Vérifier que le montant est positif
-        if data['montant'] <= 0:
-            raise serializers.ValidationError("Le montant doit être positif")
+        # Vérifier que la transaction existe
+        type_transaction = data['type_transaction']
+        reference = data['reference']
         
-        # Vérifier la facture si fournie
-        if 'facture' in data and data['facture']:
-            facture = data['facture']
-            if facture.statut == 'payee':
-                raise serializers.ValidationError("Cette facture est déjà payée")
+        try:
+            if type_transaction == 'demande':
+                Demande.objects.get(reference=reference)
+            elif type_transaction == 'vente_sticker':
+                VenteSticker.objects.get(reference=reference)
+        except (Demande.DoesNotExist, VenteSticker.DoesNotExist):
+            raise serializers.ValidationError({
+                'reference': f"Transaction {reference} introuvable"
+            })
         
         return data
 
-# ========================================
-# SERIALIZERS PANIER
-# ========================================
-
-class ItemPanierSerializer(serializers.ModelSerializer):
-    """Serializer pour les items du panier"""
-    sticker_details = VentesStickerMinimalSerializer(source='sticker', read_only=True)
-    prix_unitaire_ht = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    prix_unitaire_ttc = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    montant_ht = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    montant_ttc = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    
-    class Meta:
-        model = ItemPanier
-        fields = [
-            'id', 'panier', 'sticker', 'sticker_details',
-            'quantite', 'prix_unitaire_ht', 'prix_unitaire_ttc',
-            'montant_ht', 'montant_ttc', 'texte_personnalise',
-            'couleur_personnalisee', 'date_ajout'
-        ]
-        read_only_fields = [
-            'prix_unitaire_ht', 'prix_unitaire_ttc',
-            'montant_ht', 'montant_ttc', 'date_ajout'
-        ]
-
-class PanierSerializer(serializers.ModelSerializer):
-    """Serializer pour les paniers"""
-    items = ItemPanierSerializer(many=True, read_only=True)
-    total_ht = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    total_ttc = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    client_details = ClientMinimalSerializer(source='client', read_only=True)
-    
-    class Meta:
-        model = Panier
-        fields = [
-            'id', 'client', 'client_details', 'session_key',
-            'items', 'total_ht', 'total_ttc',
-            'date_creation', 'date_modification', 'est_actif'
-        ]
-        read_only_fields = [
-            'session_key', 'date_creation', 'date_modification'
-        ]
 
 # ========================================
-# SERIALIZERS AVIS CLIENTS
+# 4. SERIALIZERS AVIS CLIENTS
 # ========================================
 
-class AvisClientSerializer(serializers.ModelSerializer):
-    """Serializer pour les avis clients"""
-    client_details = ClientMinimalSerializer(source='client', read_only=True)
-    sticker_details = VentesStickerMinimalSerializer(source='sticker', read_only=True)
-    note_etoiles = serializers.CharField(read_only=True)
-    pourcentage_utile = serializers.FloatField(read_only=True)
-    
+class AvisClientCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la création d'avis SANS COMPTE
+    """
     class Meta:
         model = AvisClient
-        fields = '__all__'
-        read_only_fields = [
-            'created_at', 'updated_at', 'utile_oui', 'utile_non',
-            'note_etoiles', 'pourcentage_utile'
+        fields = [
+            'sticker', 'client_nom', 'client_email',
+            'note', 'titre', 'commentaire'
         ]
     
+    def validate_client_email(self, value):
+        """
+        Validation de l'email
+        """
+        if value:
+            validator = EmailValidator()
+            try:
+                validator(value)
+            except DjangoValidationError:
+                raise serializers.ValidationError("Adresse email invalide")
+            return value.lower().strip()
+        return value
+    
     def validate_note(self, value):
+        """
+        Validation de la note (1-5)
+        """
         if value < 1 or value > 5:
             raise serializers.ValidationError("La note doit être entre 1 et 5")
         return value
+    
+    def create(self, validated_data):
+        """
+        Création avec ajout d'informations de suivi
+        """
+        # Ajouter IP pour anti-spam
+        request = self.context.get('request')
+        if request:
+            validated_data['ip_address'] = self._get_client_ip(request)
+        
+        # Masquer le nom du client (ex: John D. → John D.)
+        if 'client_nom' in validated_data:
+            validated_data['nom_masque'] = self._masquer_nom(
+                validated_data['client_nom']
+            )
+        
+        return super().create(validated_data)
+    
+    def _get_client_ip(self, request):
+        """
+        Récupérer l'adresse IP du client
+        """
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        if xff:
+            return xff.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR', '')
+    
+    def _masquer_nom(self, nom_complet):
+        """
+        Masquer partiellement le nom pour la confidentialité
+        """
+        parties = nom_complet.split()
+        if len(parties) >= 2:
+            return f"{parties[0]} {parties[1][0]}."
+        return f"{nom_complet}"
+
+
+class AvisClientSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la lecture des avis
+    """
+    nom_masque = serializers.CharField(read_only=True)
+    sticker_nom = serializers.CharField(source='sticker.nom', read_only=True)
+    date_formattee = serializers.CharField(source='get_date_formattee', read_only=True)
+    
+    class Meta:
+        model = AvisClient
+        fields = [
+            'id', 'nom_masque', 'sticker', 'sticker_nom',
+            'note', 'titre', 'commentaire', 'date_formattee',
+            'utile_oui', 'utile_non', 'created_at'
+        ]
+        read_only_fields = fields
+
 
 # ========================================
-# SERIALIZERS CODES PROMO
+# 5. SERIALIZERS CODES PROMO
 # ========================================
 
 class CodePromoSerializer(serializers.ModelSerializer):
-    """Serializer pour les codes promo"""
-    est_valide = serializers.SerializerMethodField()
-    message_validation = serializers.SerializerMethodField()
+    """
+    Serializer pour les codes promotionnels
+    """
+    valide = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = CodePromo
-        fields = '__all__'
-        read_only_fields = [
-            'created_at', 'updated_at', 'utilisations_actuelles'
+        fields = [
+            'id', 'code', 'description',
+            'pourcentage_reduction', 'montant_fixe_reduction',
+            'date_debut', 'date_expiration',
+            'limite_utilisations', 'utilisations',
+            'type_utilisateur', 'est_actif', 'valide'
         ]
+        read_only_fields = ['id', 'utilisations', 'valide']
     
-    def get_est_valide(self, obj):
-        return obj.est_valide()[0]
+    def get_valide(self, obj):
+        """
+        Vérifier si le code promo est encore valide
+        """
+        now = timezone.now()
+        return (
+            obj.est_actif and
+            obj.date_debut <= now <= obj.date_expiration and
+            obj.utilisations < obj.limite_utilisations
+        )
+
+
+class CodePromoValidationSerializer(serializers.Serializer):
+    """
+    Serializer pour valider un code promo
+    """
+    code = serializers.CharField(max_length=20)
+    type_utilisateur = serializers.ChoiceField(
+        choices=['client_externe', 'notaire', 'admin'],
+        default='client_externe'
+    )
     
-    def get_message_validation(self, obj):
-        return obj.est_valide()[1]
+    def validate(self, data):
+        """
+        Validation du code promo
+        """
+        from .services import CodePromoService
+        
+        try:
+            code_promo = CodePromoService.valider_code_promo(
+                code=data['code'],
+                type_utilisateur=data['type_utilisateur']
+            )
+            data['code_promo_obj'] = code_promo
+            data['reduction'] = code_promo.pourcentage_reduction
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({'code': str(e)})
+        
+        return data
+
 
 # ========================================
-# SERIALIZERS STATISTIQUES
+# 6. SERIALIZERS STATISTIQUES
 # ========================================
 
-class VentesStatsSerializer(serializers.Serializer):
-    """Serializer pour les statistiques de vente"""
-    date = serializers.DateField()
-    nombre_commandes = serializers.IntegerField()
-    chiffre_affaires_ht = serializers.DecimalField(max_digits=12, decimal_places=2)
-    chiffre_affaires_ttc = serializers.DecimalField(max_digits=12, decimal_places=2)
-    nouveaux_clients = serializers.IntegerField()
-    clients_actifs = serializers.IntegerField()
-    stickers_vendus = serializers.IntegerField()
-    panier_moyen = serializers.DecimalField(max_digits=10, decimal_places=2)
-
-class ClientStatsSerializer(serializers.Serializer):
-    """Serializer pour les statistiques client"""
-    total_clients = serializers.IntegerField()
-    clients_actifs = serializers.IntegerField()
-    nouveaux_clients_mois = serializers.IntegerField()
-    clients_fideles = serializers.IntegerField()
-    panier_moyen = serializers.DecimalField(max_digits=10, decimal_places=2)
-
-class StockStatsSerializer(serializers.Serializer):
-    """Serializer pour les statistiques de stock"""
-    total_stickers = serializers.IntegerField()
-    stickers_actifs = serializers.IntegerField()
-    valeur_stock = serializers.DecimalField(max_digits=12, decimal_places=2)
-    stickers_en_rupture = serializers.IntegerField()
-    stickers_faible_stock = serializers.IntegerField()
-
-class DashboardStatsSerializer(serializers.Serializer):
-    """Serializer pour le dashboard"""
-    period = serializers.CharField()
-    chiffre_affaires = serializers.DecimalField(max_digits=12, decimal_places=2)
-    commandes = serializers.IntegerField()
-    nouveaux_clients = serializers.IntegerField()
-    stickers_vendus = serializers.IntegerField()
-    panier_moyen = serializers.DecimalField(max_digits=10, decimal_places=2)
-    top_stickers = serializers.ListField()
-    top_clients = serializers.ListField()
+class StatistiquesPeriodSerializer(serializers.Serializer):
+    """
+    Serializer pour définir la période des statistiques
+    """
+    date_debut = serializers.DateField(required=False)
+    date_fin = serializers.DateField(required=False)
+    notaire_id = serializers.IntegerField(required=False)
+    
+    def validate(self, data):
+        """
+        Validation des dates
+        """
+        date_debut = data.get('date_debut')
+        date_fin = data.get('date_fin')
+        
+        if date_debut and date_fin and date_debut > date_fin:
+            raise serializers.ValidationError({
+                'date_debut': 'La date de début doit être antérieure à la date de fin'
+            })
+        
+        return data

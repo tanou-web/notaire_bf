@@ -11,11 +11,19 @@ from django.db import models
 class ConseilsConseildujour(models.Model):
     conseil = models.TextField()
     date = models.DateField(unique=True)
-    actif = models.BooleanField()
+    actif = models.BooleanField(default=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
+    public_reference = models.CharField(max_length=50,null=True,blank=True)
     class Meta:
         managed = False
         db_table = 'conseils_conseildujour'
         db_table_comment = "Conseil du jour pour page d'accueil"
+        indexes = [
+            models.Index(fields=['date']),
+            models.Index(fields=['actif']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+        def __str__(self):
+            return f"Conseil du {self.date}"

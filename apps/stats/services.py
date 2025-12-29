@@ -5,6 +5,14 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 import logging
 
+from .models import (
+    StatsVisite,    
+    PageVue,        
+    Referent,       
+    PaysVisite,     
+    PeriodeActive   
+)
+
 logger = logging.getLogger(__name__)
 
 class StatsService:

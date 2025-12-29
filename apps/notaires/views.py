@@ -8,29 +8,12 @@ from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import NotairesNotaire, Region, Ville
+from .models import NotairesNotaire, NotairesCotisation
 from .serializers import (
     NotaireSerializer, NotaireMinimalSerializer,
     NotaireCreateSerializer, NotaireUpdateSerializer,
-    RegionSerializer, VilleSerializer, NotaireStatsSerializer
+    NotaireStatsSerializer, CotisationSerializer
 )
-
-class RegionViewSet(viewsets.ReadOnlyModelViewSet):
-    """API pour les régions"""
-    queryset = Region.objects.all().order_by('nom')
-    serializer_class = RegionSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['nom', 'code']
-
-class VilleViewSet(viewsets.ReadOnlyModelViewSet):
-    """API pour les villes"""
-    queryset = Ville.objects.all().order_by('nom')
-    serializer_class = VilleSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['nom', 'code_postal']
-    filterset_fields = ['region']
 
 class NotaireViewSet(viewsets.ModelViewSet):
     """
@@ -46,7 +29,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['region', 'ville', 'actif']
     search_fields = ['nom', 'prenom', 'matricule', 'email']
-    ordering_fields = ['nom', 'prenom', 'total_ventes', 'total_cotisations', 'date_inscription']
+    ordering_fields = ['nom', 'prenom', 'total_ventes', 'total_cotisations', 'created_at']
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -81,88 +64,133 @@ class NotaireViewSet(viewsets.ModelViewSet):
     def demandes(self, request, pk=None):
         """Récupérer les demandes assignées à un notaire"""
         notaire = self.get_object()
-        from apps.demandes.serializers import DemandeSerializer
         
-        demandes = notaire.demandesdemande_set.all().select_related(
-            'document', 'utilisateur'
-        ).order_by('-created_at')
-        
-        page = self.paginate_queryset(demandes)
-        if page is not None:
-            serializer = DemandeSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = DemandeSerializer(demandes, many=True)
-        return Response(serializer.data)
+        try:
+            from apps.ventes.models import Demande
+            from apps.ventes.serializers import DemandeSerializer
+            
+            demandes = Demande.objects.filter(notaire=notaire).select_related(
+                'document'
+            ).order_by('-created_at')
+            
+            page = self.paginate_queryset(demandes)
+            if page is not None:
+                serializer = DemandeSerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            
+            serializer = DemandeSerializer(demandes, many=True)
+            return Response(serializer.data)
+            
+        except ImportError:
+            return Response({
+                'detail': 'Module demandes non disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
     @action(detail=True, methods=['get'])
     def statistiques(self, request, pk=None):
         """Récupérer les statistiques détaillées d'un notaire"""
         notaire = self.get_object()
-        from apps.demandes.models import DemandesDemande
         
-        # Statistiques par statut
-        stats = DemandesDemande.objects.filter(notaire=notaire).aggregate(
-            total=Count('id'),
-            en_attente=Count('id', filter=Q(statut='en_attente_traitement')),
-            en_traitement=Count('id', filter=Q(statut='en_traitement')),
-            terminees=Count('id', filter=Q(statut='document_envoye_email')),
-            annulees=Count('id', filter=Q(statut='annule')),
-            montant_total=Sum('montant_total'),
-            commission_total=Sum('frais_commission')
-        )
-        
-        # Dernières demandes
-        dernieres_demandes = DemandesDemande.objects.filter(
-            notaire=notaire
-        ).order_by('-created_at')[:5]
-        
-        # Statistiques mensuelles
-        mois_dernier = timezone.now() - timedelta(days=30)
-        stats_mensuelles = DemandesDemande.objects.filter(
-            notaire=notaire,
-            created_at__gte=mois_dernier
-        ).aggregate(
-            mensuel=Count('id'),
-            mensuel_montant=Sum('montant_total')
-        )
-        
-        data = {
-            'notaire': NotaireSerializer(notaire).data,
-            'statistiques': {
-                'globales': {
-                    'total_demandes': stats['total'] or 0,
-                    'demandes_en_attente': stats['en_attente'] or 0,
-                    'demandes_en_traitement': stats['en_traitement'] or 0,
-                    'demandes_terminees': stats['terminees'] or 0,
-                    'demandes_annulees': stats['annulees'] or 0,
-                    'montant_total': float(stats['montant_total'] or 0),
-                    'commission_total': float(stats['commission_total'] or 0),
+        try:
+            from apps.ventes.models import Demande
+            
+            # Statistiques par statut
+            stats = Demande.objects.filter(notaire=notaire).aggregate(
+                total=Count('id'),
+                en_attente_paiement=Count('id', filter=Q(statut='attente_paiement')),
+                en_traitement=Count('id', filter=Q(statut='en_traitement')),
+                terminees=Count('id', filter=Q(statut='termine')),
+                annulees=Count('id', filter=Q(statut='annule')),
+                montant_total=Sum('montant_total')
+            )
+            
+            # Dernières demandes
+            dernieres_demandes = Demande.objects.filter(
+                notaire=notaire
+            ).order_by('-created_at')[:5]
+            
+            # Statistiques mensuelles
+            mois_dernier = timezone.now() - timedelta(days=30)
+            stats_mensuelles = Demande.objects.filter(
+                notaire=notaire,
+                created_at__gte=mois_dernier
+            ).aggregate(
+                mensuel=Count('id'),
+                mensuel_montant=Sum('montant_total')
+            )
+            
+            total = stats['total'] or 0
+            terminees = stats['terminees'] or 0
+            
+            data = {
+                'notaire': {
+                    'id': notaire.id,
+                    'nom_complet': f"{notaire.nom} {notaire.prenom}",
+                    'matricule': notaire.matricule,
+                    'email': notaire.email,
+                    'telephone': notaire.telephone,
+                    'region': notaire.region.nom if notaire.region else None,
+                    'ville': notaire.ville.nom if notaire.ville else None,
+                    'total_ventes': float(notaire.total_ventes),
+                    'total_cotisations': float(notaire.total_cotisations),
                 },
-                'mensuelles': {
-                    'demandes': stats_mensuelles['mensuel'] or 0,
-                    'montant': float(stats_mensuelles['mensuel_montant'] or 0),
+                'statistiques': {
+                    'globales': {
+                        'total_demandes': total,
+                        'demandes_en_attente_paiement': stats['en_attente_paiement'] or 0,
+                        'demandes_en_traitement': stats['en_traitement'] or 0,
+                        'demandes_terminees': terminees,
+                        'demandes_annulees': stats['annulees'] or 0,
+                        'montant_total': float(stats['montant_total'] or 0),
+                    },
+                    'mensuelles': {
+                        'demandes': stats_mensuelles['mensuel'] or 0,
+                        'montant': float(stats_mensuelles['mensuel_montant'] or 0),
+                    },
+                    'performance': {
+                        'taux_completion': round(
+                            terminees / max(total, 1) * 100, 1
+                        ) if total > 0 else 0,
+                    }
                 },
-                'performance': {
-                    'taux_completion': round(
-                        (stats['terminees'] or 0) / max(stats['total'] or 1, 1) * 100, 1
-                    ),
-                    'temps_moyen_traitement': 48,  # À calculer réellement
+                'dernieres_demandes': [
+                    {
+                        'id': d.id,
+                        'reference': d.reference,
+                        'client_nom': d.nom_complet_client,
+                        'montant': float(d.montant_total),
+                        'statut': d.get_statut_display() if hasattr(d, 'get_statut_display') else d.statut,
+                        'created_at': d.created_at,
+                    }
+                    for d in dernieres_demandes
+                ]
+            }
+            
+            return Response(data)
+            
+        except ImportError:
+            # Retourner des statistiques basiques si l'app ventes n'est pas disponible
+            return Response({
+                'notaire': {
+                    'id': notaire.id,
+                    'nom_complet': f"{notaire.nom} {notaire.prenom}",
+                    'matricule': notaire.matricule,
+                },
+                'message': 'Statistiques détaillées non disponibles',
+                'statistiques_basiques': {
+                    'total_ventes': float(notaire.total_ventes),
+                    'total_cotisations': float(notaire.total_cotisations),
                 }
-            },
-            'dernieres_demandes': [
-                {
-                    'id': d.id,
-                    'reference': d.reference,
-                    'document': d.document.nom if d.document else '',
-                    'statut': d.get_statut_display(),
-                    'created_at': d.created_at,
-                }
-                for d in dernieres_demandes
-            ]
-        }
+            })
+    
+    @action(detail=True, methods=['get'])
+    def cotisations(self, request, pk=None):
+        """Récupérer les cotisations d'un notaire"""
+        notaire = self.get_object()
+        cotisations = notaire.cotisations.all().order_by('-annee')
         
-        return Response(data)
+        serializer = CotisationSerializer(cotisations, many=True)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def activer(self, request, pk=None):
@@ -174,7 +202,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
         return Response({
             'status': 'success',
             'message': f'Notaire {notaire.nom} {notaire.prenom} activé',
-            'notaire': NotaireSerializer(notaire).data
+            'notaire': NotaireMinimalSerializer(notaire).data
         })
     
     @action(detail=True, methods=['post'])
@@ -187,8 +215,9 @@ class NotaireViewSet(viewsets.ModelViewSet):
         return Response({
             'status': 'success',
             'message': f'Notaire {notaire.nom} {notaire.prenom} désactivé',
-            'notaire': NotaireSerializer(notaire).data
+            'notaire': NotaireMinimalSerializer(notaire).data
         })
+
 
 class NotaireStatsAPIView(APIView):
     """API pour les statistiques globales des notaires"""
@@ -201,8 +230,6 @@ class NotaireStatsAPIView(APIView):
                 {'error': 'Permission non accordée'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        from apps.demandes.models import DemandesDemande
         
         # Statistiques globales
         stats_globales = NotairesNotaire.objects.aggregate(
@@ -228,11 +255,11 @@ class NotaireStatsAPIView(APIView):
             'id', 'nom', 'prenom', 'region__nom', 'total_ventes'
         )
         
-        # Dernières activités
+        # Derniers inscrits
         derniers_notaires = NotairesNotaire.objects.order_by(
-            '-date_inscription'
+            '-created_at'
         )[:5].values(
-            'id', 'nom', 'prenom', 'date_inscription'
+            'id', 'nom', 'prenom', 'created_at'
         )
         
         data = {
@@ -249,3 +276,67 @@ class NotaireStatsAPIView(APIView):
         }
         
         return Response(data)
+
+
+class CotisationViewSet(viewsets.ModelViewSet):
+    """API pour les cotisations des notaires"""
+    queryset = NotairesCotisation.objects.all()
+    serializer_class = CotisationSerializer
+    permission_classes = [permissions.IsAdminUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['notaire', 'annee', 'statut']
+
+
+class RechercheNotairesAPIView(APIView):
+    """API de recherche avancée de notaires"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        # Récupérer les paramètres
+        region_id = request.query_params.get('region')
+        ville_id = request.query_params.get('ville')
+        search = request.query_params.get('search', '')
+        actif = request.query_params.get('actif', 'true').lower() == 'true'
+        
+        queryset = NotairesNotaire.objects.all()
+        
+        # Filtres
+        if region_id:
+            queryset = queryset.filter(region_id=region_id)
+        
+        if ville_id:
+            queryset = queryset.filter(ville_id=ville_id)
+        
+        if actif:
+            queryset = queryset.filter(actif=True)
+        
+        # Recherche texte
+        if search:
+            queryset = queryset.filter(
+                Q(nom__icontains=search) |
+                Q(prenom__icontains=search) |
+                Q(matricule__icontains=search) |
+                Q(email__icontains=search) |
+                Q(region__nom__icontains=search) |
+                Q(ville__nom__icontains=search)
+            ).select_related('region', 'ville')
+        
+        serializer = NotaireMinimalSerializer(queryset, many=True)
+        
+        # Récupérer les régions et villes disponibles pour les filtres
+        regions = NotairesNotaire.objects.exclude(region__isnull=True).values(
+            'region__id', 'region__nom'
+        ).distinct().order_by('region__nom')
+        
+        villes = NotairesNotaire.objects.exclude(ville__isnull=True).values(
+            'ville__id', 'ville__nom'
+        ).distinct().order_by('ville__nom')
+        
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+            'filtres_disponibles': {
+                'regions': list(regions),
+                'villes': list(villes),
+            }
+        })

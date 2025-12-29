@@ -41,3 +41,5 @@ class VerificationVerificationtoken(models.Model):
     class Meta:
         managed = False
         db_table = 'verification_verificationtoken'
+
+User = UtilisateursUser

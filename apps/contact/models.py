@@ -43,7 +43,7 @@ class ContactInformations(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'contact_informations'
         verbose_name = 'Information de Contact'
         verbose_name_plural = 'Informations de Contact'

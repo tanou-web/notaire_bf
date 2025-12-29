@@ -22,7 +22,7 @@ class DemandesDemande(models.Model):
 
     id = models.AutoField(primary_key=True)
     reference = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    utilisateur = models.ForeignKey('utilisateurs.UtilisateursUser', on_delete=models.CASCADE)
+    utilisateur = models.ForeignKey('utilisateurs.UtilisateursUser', on_delete=models.SET_NULL, blank=True, null=True)
     document = models.ForeignKey('documents.DocumentsDocument', on_delete=models.CASCADE)
     statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='brouillon')
     donnees_formulaire = models.JSONField(default=dict)

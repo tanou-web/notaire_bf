@@ -15,7 +15,7 @@ from apps.utilisateurs.permissions import IsOwnerOrReadOnly
 class DemandeViewSet(viewsets.ModelViewSet):
     queryset = DemandesDemande.objects.all()
     serializer_class = DemandeSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['statut', 'document', 'notaire']
     search_fields = ['reference', 'email_reception']
@@ -25,7 +25,9 @@ class DemandeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_superuser or user.is_staff:
             return DemandesDemande.objects.all()
-        return DemandesDemande.objects.filter(utilisateur=user)
+        if user.is_authenticated:
+            return DemandesDemande.objects.filter(utilisateur=user)
+        return DemandesDemande.objects.none()
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -87,7 +89,7 @@ class PieceJointeViewSet(viewsets.ModelViewSet):
     """API pour les pièces jointes des demandes"""
     queryset = DemandesPieceJointe.objects.all()
     serializer_class = PieceJointeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['demande', 'type_piece']
     ordering_fields = ['created_at']
@@ -96,6 +98,12 @@ class PieceJointeViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return PieceJointeCreateSerializer
         return PieceJointeSerializer
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return []  # autorise tout le monde pour créer
+        return [permission() for permission in self.permission_classes]
+
     
     def get_queryset(self):
         user = self.request.user
@@ -103,6 +111,7 @@ class PieceJointeViewSet(viewsets.ModelViewSet):
         if user.is_superuser or user.is_staff:
             return DemandesPieceJointe.objects.all()
         return DemandesPieceJointe.objects.filter(demande__utilisateur=user)
+
     
     def perform_create(self, serializer):
         demande_id = serializer.validated_data.get('demande')
@@ -115,6 +124,6 @@ class PieceJointeViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({'demande': 'Demande introuvable'})
         
         # Vérifier que l'utilisateur peut ajouter des pièces à cette demande
-        if not self.request.user.is_staff and demande.utilisateur != self.request.user:
+        if not self.request.user.is_staff and demande.utilisateur not in [self.request.user, None]:
             raise permissions.PermissionDenied("Vous ne pouvez pas ajouter de pièce jointe à cette demande")
         serializer.save()

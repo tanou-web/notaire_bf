@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class AuditAdminactionlog(models.Model):
-    utilisateur = models.ForeignKey('UtilisateursUser', models.DO_NOTHING, blank=True, null=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     action = models.CharField(max_length=100)
     modele = models.CharField(max_length=50, blank=True, null=True)
     instance_id = models.IntegerField(blank=True, null=True)
@@ -18,8 +18,8 @@ class AuditAdminactionlog(models.Model):
     nouvelles_valeurs = models.JSONField(blank=True, null=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
@@ -76,7 +76,8 @@ class SecurityLog(models.Model):
         ordering = ['-timestamp']
     
     def __str__(self):
-        return f"{self.timestamp} - {self.get_action_display()} - {self.user}"
+        user = self.user.username if self.user else 'Anonyme'
+        return f"{self.timestamp} - {self.get_action_display()} - {user}"
 
 class LoginAttemptLog(models.Model):
     """Journal spécifique des tentatives de connexion"""
@@ -117,7 +118,8 @@ class LoginAttemptLog(models.Model):
 class TokenUsageLog(models.Model):
     """Journal d'utilisation des tokens"""
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
+    public_reference = models.CharField(max_length=50,null=True,blank=True)
     token_type = models.CharField(max_length=20)  # 'verification', 'reset', '2fa'
     action = models.CharField(max_length=50)
     token_id = models.IntegerField(null=True, blank=True)

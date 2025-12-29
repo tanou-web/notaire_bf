@@ -1,11 +1,6 @@
-# apps/organisation/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import (
-    OrganisationMembrebureau,
-    OrganisationHistorique,
-    OrganisationMission
-)
+from .models import OrganisationMembrebureau, OrganisationHistorique, OrganisationMission
 
 @admin.register(OrganisationMembrebureau)
 class MembreBureauAdmin(admin.ModelAdmin):
@@ -14,7 +9,7 @@ class MembreBureauAdmin(admin.ModelAdmin):
     list_display = [
         'photo_preview', 'nom_complet', 'poste_display',
         'ordre', 'actif_badge', 'en_mandat_badge',
-        'date_entree', 'telephone', 'actions'
+        'date_entree', 'telephone', 'actions_buttons'  # renommé pour éviter conflit
     ]
     
     list_filter = ['poste', 'actif', 'date_entree']
@@ -81,13 +76,13 @@ class MembreBureauAdmin(admin.ModelAdmin):
         )
     en_mandat_badge.short_description = 'Mandat'
     
-    def actions(self, obj):
+    def actions_buttons(self, obj):  # anciennement actions
         view_url = f'/admin/organisation/organisationmembrebureau/{obj.id}/change/'
         return format_html(
             '<a href="{}" class="button" style="background-color:#2196F3;color:white;padding:5px 10px;border-radius:3px;">Voir</a>',
             view_url
         )
-    actions.short_description = 'Actions'
+    actions_buttons.short_description = 'Actions'
     
     # Actions personnalisées
     def activer_selection(self, request, queryset):
@@ -101,35 +96,29 @@ class MembreBureauAdmin(admin.ModelAdmin):
     desactiver_selection.short_description = "Désactiver les membres sélectionnés"
 
 
+# ========================================
+# Historique et Missions restent inchangés
+# ========================================
+
 @admin.register(OrganisationHistorique)
 class HistoriqueAdmin(admin.ModelAdmin):
-    """Admin pour l'historique"""
     list_display = ['titre', 'date_evenement', 'ordre', 'actif', 'created_at']
     list_filter = ['actif', 'date_evenement']
     search_fields = ['titre', 'contenu']
     ordering = ['ordre', 'date_evenement']
     fieldsets = (
-        ('Contenu', {
-            'fields': ('titre', 'contenu', 'date_evenement', 'image')
-        }),
-        ('Affichage', {
-            'fields': ('ordre', 'actif')
-        }),
+        ('Contenu', {'fields': ('titre', 'contenu', 'date_evenement', 'image')}),
+        ('Affichage', {'fields': ('ordre', 'actif')}),
     )
 
 
 @admin.register(OrganisationMission)
 class MissionAdmin(admin.ModelAdmin):
-    """Admin pour les missions"""
     list_display = ['titre', 'icone', 'ordre', 'actif', 'created_at']
     list_filter = ['actif']
     search_fields = ['titre', 'description']
     ordering = ['ordre', 'titre']
     fieldsets = (
-        ('Contenu', {
-            'fields': ('titre', 'description', 'icone')
-        }),
-        ('Affichage', {
-            'fields': ('ordre', 'actif')
-        }),
+        ('Contenu', {'fields': ('titre', 'description', 'icone')}),
+        ('Affichage', {'fields': ('ordre', 'actif')}),
     )

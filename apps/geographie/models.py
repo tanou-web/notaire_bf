@@ -25,7 +25,7 @@ class GeographieVille(models.Model):
     region = models.ForeignKey(GeographieRegion, models.DO_NOTHING)
     nom = models.CharField(max_length=100)
     code_postal = models.CharField(max_length=10, blank=True, null=True)
-    create_at = models.DateTimeField()
+    created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
     class Meta:

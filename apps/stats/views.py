@@ -14,14 +14,16 @@ import csv
 from django.http import HttpResponse
 
 from .models import (
-    StatsVisite, PageVue, Referent, PaysVisite, 
-    PeriodeActive, Appareil, Navigateur
+    StatsVisite,    
+    PageVue,        
+    Referent,       
+    PaysVisite,     
+    PeriodeActive   
 )
 from .serializers import (
     StatsVisiteSerializer, PageVueSerializer, ReferentSerializer,
-    PaysVisiteSerializer, PeriodeActiveSerializer, AppareilSerializer,
-    NavigateurSerializer, DashboardSerializer, RapportSerializer,
-    ExportSerializer
+    PaysVisiteSerializer, PeriodeActiveSerializer, DashboardSerializer, RapportSerializer
+
 )
 from .services import StatsService
 from .permissions import IsAdminOrReadOnly, CanViewStats
@@ -292,19 +294,6 @@ class PeriodeActiveViewSet(viewsets.ModelViewSet):
             })
         
         return Response(formatted_data)
-
-
-class AppareilViewSet(viewsets.ModelViewSet):
-    queryset = Appareil.objects.all()
-    serializer_class = AppareilSerializer
-    permission_classes = [IsAuthenticated, CanViewStats]
-
-
-class NavigateurViewSet(viewsets.ModelViewSet):
-    queryset = Navigateur.objects.all()
-    serializer_class = NavigateurSerializer
-    permission_classes = [IsAuthenticated, CanViewStats]
-
 
 class DashboardView(generics.GenericAPIView):
     """Vue pour le tableau de bord des statistiques."""

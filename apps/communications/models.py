@@ -13,12 +13,25 @@ class CommunicationsEmaillog(models.Model):
     destinataire = models.CharField(max_length=254)
     sujet = models.CharField(max_length=200)
     contenu = models.TextField(blank=True, null=True)
-    statut = models.CharField(max_length=20)
+    STATUS_CHOICES = [
+        ('envoye', 'Envoyé'),
+        ('echec', 'Échec'),
+        ('ouvert', 'Ouvert'),
+        ('clique', 'Cliqué'),
+    ]
+    statut = models.CharField(max_length=20, choices=STATUS_CHOICES)
     message_id = models.CharField(max_length=200, blank=True, null=True)
     erreur = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
+    public_reference = models.CharField(max_length=50,null=True,blank=True)
     class Meta:
         managed = False
         db_table = 'communications_emaillog'
+        indexes = [
+            models.Index(fields=['destinataire']),
+            models.Index(fields=['sujet']),
+            models.Index(fields=['statut']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]

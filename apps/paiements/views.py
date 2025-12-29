@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction
 from .models import PaiementsTransaction
-from .serializers import PaiementSerializer, PaiementCreateSerializer, WebhookSerializer
+from .serializers import PaiementSerializer, PaiementCreateSerializer
 from apps.demandes.models import DemandesDemande
 
 
@@ -80,8 +80,14 @@ from notaires_bf import settings
 # Import des services
 from .services import get_payment_service
 from .models import PaiementsTransaction
-from .serializers import TransactionSerializer, TransactionCreateSerializer
-
+from .serializers import (
+    PaiementSerializer, 
+    PaiementCreateSerializer, 
+    PaiementUpdateSerializer,
+    WebhookSerializer,
+    InitierPaiementResponseSerializer,
+    StatistiquesPaiementSerializer
+)
 
 class InitierPaiementView(APIView):
     """Vue pour initier un paiement avec l'API de l'opérateur"""

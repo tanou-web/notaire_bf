@@ -1,7 +1,9 @@
+from tabnanny import verbose
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
+from rest_framework.fields import MaxValueValidator
 
 class StatsVisite(models.Model):
     """Modèle pour stocker les statistiques de visites quotidiennes."""
@@ -45,6 +47,10 @@ class StatsVisite(models.Model):
         help_text=_("Pourcentage de visites avec une seule page vue")
     )
     
+    heure = models.IntegerField(
+        verbose_name=_('Heure (0-23)'),
+        validators= [MinValueValidator(0), MaxValueValidator(23)]
+    )
     # Sources de trafic
     trafic_direct = models.IntegerField(default=0, verbose_name=_("Trafic direct"))
     trafic_reference = models.IntegerField(default=0, verbose_name=_("Trafic référent"))

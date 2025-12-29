@@ -15,12 +15,12 @@ class ActualitesActualite(models.Model):
     ]
     
     titre = models.CharField(max_length=200)
-    slug = models.CharField(unique=True, max_length=200)
+    slug = models.SlugField(unique=True, max_length=200)
     contenu = models.TextField()
     resume = models.CharField(max_length=500, blank=True, null=True)
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES)
     image_principale = models.CharField(max_length=200, blank=True, null=True)
-    auteur = models.ForeignKey('utilisateurs.UtilisateursUser', models.DO_NOTHING, blank=True, null=True)
+    auteur = models.ForeignKey('utilisateurs.UtilisateursUser',on_delete=models.SET_NULL, blank=True, null=True)
     date_publication = models.DateTimeField(blank=True, null=True)
     important = models.BooleanField(default=False)
     publie = models.BooleanField(default=False)
@@ -58,18 +58,20 @@ class ActualitesActualite(models.Model):
             raise ValidationError("Une actualité publiée ne peut pas avoir une date de publication dans le futur")
 
     def save(self, *args, **kwargs):
-        now = timezone.now
+        now = timezone.now()
         if not self.slug:
             self.slug =slugify(self.titre)
         if not self.pk:
             original_slug = self.slug
             counter = 1
-            while ActualitesActualite.objects.filter(slug=self.slug).exist():
+            while ActualitesActualite.objects.filter(slug=self.slug).exists():
                 self.slug = f'{original_slug}--{counter}'
-                counter =1
+                counter +=1
             self.created_at = now
         if self.publie and not self.date_publication:
             self.date_publication = now
+        self.updated_at = now
+        super().save(*args, **kwargs)
 
     def incrementer_vues(self):
         """Incrémenter le compteur de vues"""
