@@ -36,24 +36,24 @@ class IsNotairePermission(permissions.BasePermission):
         return False
  
     
-"""
+
 class IsSuperUser(permissions.BasePermission):
     
-    Permission qui n'autorise que les superutilisateurs.
+   # Permission qui n'autorise que les superutilisateurs.
     
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_superuser)
 
 class IsAdminUser(permissions.BasePermission):
     
-    Permission qui autorise les administrateurs (staff) et superutilisateurs.
+    #Permission qui autorise les administrateurs (staff) et superutilisateurs.
     
     def has_permission(self, request, view):
         return bool(request.user and (request.user.is_staff or request.user.is_superuser))
 
 class IsOwnerOrAdmin(permissions.BasePermission):
    
-    Permission qui autorise le propriétaire ou les administrateurs.
+    #Permission qui autorise le propriétaire ou les administrateurs.
     
     def has_object_permission(self, request, view, obj):
         # Les administrateurs peuvent tout faire
@@ -62,4 +62,3 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         
         # L'utilisateur peut modifier son propre objet
         return obj == request.user
-"""

@@ -22,12 +22,29 @@ class DemandeViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'montant_total']
     
     def get_queryset(self):
+        """
+        Filtre les demandes selon l'utilisateur :
+        - Admin/Superuser : voit toutes les demandes
+        - Utilisateur authentifié : voit ses propres demandes
+        - Utilisateur anonyme : peut filtrer par email ou référence via query params
+        """
         user = self.request.user
         if user.is_superuser or user.is_staff:
             return DemandesDemande.objects.all()
         if user.is_authenticated:
             return DemandesDemande.objects.filter(utilisateur=user)
-        return DemandesDemande.objects.none()
+        
+        # Utilisateur anonyme : peut voir une demande spécifique par email ou référence
+        email = self.request.query_params.get('email')
+        reference = self.request.query_params.get('reference')
+        
+        queryset = DemandesDemande.objects.none()
+        if email:
+            queryset = DemandesDemande.objects.filter(email_reception=email)
+        elif reference:
+            queryset = DemandesDemande.objects.filter(reference=reference)
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -61,6 +78,7 @@ class DemandeViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def completer_traitement(self, request, pk=None):
+        """Compléter le traitement d'une demande et envoyer le document par email"""
         demande = self.get_object()
         document_genere = request.FILES.get('document_genere')
 
@@ -69,20 +87,82 @@ class DemandeViewSet(viewsets.ModelViewSet):
                 'error': 'Le document généré est requis'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Store filename/path — storage handling can be improved later
-        demande.document_genere = getattr(document_genere, 'name', str(document_genere))
-        demande.statut = 'document_envoye_email'
-        demande.date_envoi_email = timezone.now()
-        demande.save()
+        # Vérifier que l'email de réception est fourni
+        if not demande.email_reception:
+            return Response({
+                'error': 'Aucun email de réception spécifié pour cette demande'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Sauvegarder le document généré
+        # Le document_genere est un CharField qui stocke le chemin/nom du fichier
+        document_genere.name  # S'assurer que le fichier a un nom
         
-        # Envoyer l'email (simplifié)
-        # TODO: Implémenter l'envoi d'email réel
-        
-        return Response({
-            'status': 'success',
-            'message': 'Document envoyé par email',
-            'demande': DemandeSerializer(demande).data
-        })
+        # Envoyer l'email avec le document en pièce jointe
+        try:
+            from django.core.mail import EmailMessage
+            from django.conf import settings
+            
+            # Lire le contenu du fichier avant de l'envoyer
+            document_genere.seek(0)  # Se repositionner au début du fichier
+            document_content = document_genere.read()
+            document_genere.seek(0)  # Se repositionner à nouveau pour sauvegarde
+            
+            sujet = f"Votre document - Demande {demande.reference}"
+            message = f"""
+Bonjour,
+
+Votre demande de document (Référence: {demande.reference}) a été traitée avec succès.
+
+Détails de la commande :
+- Référence : {demande.reference}
+- Document : {demande.document.titre if hasattr(demande.document, 'titre') else 'Document'}
+- Montant payé : {demande.montant_total} FCFA
+
+Le document demandé est joint à cet email.
+
+Cordialement,
+L'Ordre des Notaires du Burkina Faso
+"""
+            
+            email = EmailMessage(
+                sujet,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [demande.email_reception],
+            )
+            
+            # Attacher le document généré
+            email.attach(
+                document_genere.name,
+                document_content,
+                document_genere.content_type
+            )
+            
+            email.send()
+            
+            # Sauvegarder le nom du fichier dans le modèle
+            demande.document_genere = document_genere.name
+            demande.statut = 'document_envoye_email'
+            demande.date_envoi_email = timezone.now()
+            demande.save()
+            
+            return Response({
+                'status': 'success',
+                'message': f'Document envoyé par email à {demande.email_reception}',
+                'demande': DemandeSerializer(demande, context={'request': request}).data
+            })
+            
+        except Exception as e:
+            # En cas d'erreur d'envoi, retourner une erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'envoi de l'email pour la demande {demande.id}: {str(e)}")
+            
+            return Response({
+                'status': 'error',
+                'message': f'Erreur lors de l\'envoi de l\'email : {str(e)}',
+                'demande': DemandeSerializer(demande, context={'request': request}).data
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PieceJointeViewSet(viewsets.ModelViewSet):

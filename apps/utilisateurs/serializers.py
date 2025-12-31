@@ -672,7 +672,7 @@ class PasswordResetSerializer(serializers.Serializer):
     
 """
     creation d'un administrateur (réservé aux superutilisateurs)
-
+"""
 class AdminCreateSerializer(serializers.ModelSerializer):
     'sérialiseur pour créer un administrateur (réservé aux superutilisateurs)'
     password = serializers.CharField(
@@ -723,4 +723,3 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         
         user.save()
         return user
-"""

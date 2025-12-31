@@ -20,7 +20,7 @@ class AuthRole(models.Model):
 
 
 class AuthUserrole(models.Model):
-    user = models.ForeignKey('utilisateurs.UtilisateursUser', models.DO_NOTHING)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, models.DO_NOTHING)
     role = models.ForeignKey(AuthRole, models.DO_NOTHING)
     created_at = models.DateTimeField()
 

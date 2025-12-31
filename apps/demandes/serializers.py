@@ -27,18 +27,46 @@ class DemandeSerializer(serializers.ModelSerializer):
         return data
 
 class DemandeCreateSerializer(serializers.ModelSerializer):
+    """Serializer pour créer une demande - permet les utilisateurs anonymes"""
+    
     class Meta:
         model = DemandesDemande
         fields = ['document', 'email_reception', 'donnees_formulaire']
     
+    def validate_email_reception(self, value):
+        """Valider que l'email est fourni"""
+        if not value:
+            raise serializers.ValidationError("L'email de réception est requis pour les utilisateurs anonymes.")
+        return value
+    
     def create(self, validated_data):
-        # Générer la référence
+        # Générer la référence unique
         import random
         from datetime import datetime
-        validated_data['reference'] = f"DEM-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
-        validated_data['utilisateur'] = self.context['request'].user
-        validated_data['montant_total'] = validated_data['document'].prix
-        validated_data['statut'] = 'brouillon'
+        while True:
+            reference = f"DEM-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+            if not DemandesDemande.objects.filter(reference=reference).exists():
+                break
+        
+        validated_data['reference'] = reference
+        
+        # Si l'utilisateur est authentifié, l'associer à la demande
+        # Sinon, la demande reste anonyme (utilisateur = None)
+        user = self.context['request'].user
+        if user.is_authenticated:
+            validated_data['utilisateur'] = user
+        else:
+            validated_data['utilisateur'] = None
+        
+        # Calculer le montant total avec la commission (3%)
+        document = validated_data['document']
+        montant_base = document.prix
+        frais_commission = montant_base * 0.03  # 3% de commission
+        validated_data['montant_total'] = montant_base
+        validated_data['frais_commission'] = frais_commission
+        
+        # Statut initial : attente de formulaire (l'utilisateur doit remplir le formulaire)
+        validated_data['statut'] = 'attente_formulaire'
         
         return super().create(validated_data)
 

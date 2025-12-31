@@ -2,6 +2,7 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import Throttled
+from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
@@ -11,11 +12,12 @@ from .serializers import (
     UserSerializer, UserCreateSerializer, UserProfileSerializer,
     SendVerificationSerializer, VerifyTokenSerializer,
     PasswordResetSerializer, PasswordChangeSerializer,
-    ResendVerificationSerializer
+    AdminCreateSerializer,
+    ResendVerificationSerializer,
 )
 from .security.rate_limiter import LoginRateLimiter
 from .security.audit_logger import AuditLogger
-#from .permissions import IsSuperUser, IsAdminUser, IsOwnerOrAdmin
+from .permissions import IsSuperUser, IsAdminUser, IsOwnerOrAdmin
 #from .serializers import AdminCreateSerializer
 
 User = get_user_model()
@@ -260,10 +262,25 @@ class PasswordChangeView(generics.UpdateAPIView):
         }, status=status.HTTP_200_OK)
 
 
+class LogoutView(generics.GenericAPIView):
+    """Déconnexion en blacklistant le refresh token"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            refresh_token = request.data.get("refresh")
+            token = RefreshToken(refresh_token)
+            token.blacklist()  # nécessite l'app token_blacklist activée
+            return Response({"message": "Déconnecté avec succès"}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 """
 Vue creation et gestion des administrateurs
+"""
 class AdminCreateView(generics.CreateAPIView):
-    Créer un nouvel administrateur (réservé aux superutilisateurs)
+   # Créer un nouvel administrateur (réservé aux superutilisateurs)
     serializer_class = AdminCreateSerializer
     permission_classes = [IsSuperUser]
     
@@ -271,17 +288,20 @@ class AdminCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+                
+        refresh = RefreshToken.for_user(user)
         return Response({
             'message': 'Administrateur créé avec succès',
             'user_id': user.id,
             'email': user.email,
             'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser
+            'is_superuser': user.is_superuser,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token)
         }, status=status.HTTP_201_CREATED)
 
 class AdminManagementViewSet(viewsets.ModelViewSet):
-    Gestion des administrateurs (CRUD complet)
+    #Gestion des administrateurs (CRUD complet)
     serializer_class = UserSerializer
     permission_classes = [IsSuperUser]
     
@@ -291,7 +311,7 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def grant_admin(self, request, pk=None):
-        Donner les droits d'administrateur à un utilisateur
+      #  Donner les droits d'administrateur à un utilisateur
         user = self.get_object()
         user.is_staff = True
         user.save()
@@ -313,7 +333,7 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def revoke_admin(self, request, pk=None):
-        Retirer les droits d'administrateur d'un utilisateur
+       # Retirer les droits d'administrateur d'un utilisateur
         user = self.get_object()
         
         # Empêcher de se retirer soi-même les droits
@@ -340,4 +360,3 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
             'user_id': user.id,
             'is_staff': user.is_staff
         })
-"""

@@ -150,7 +150,11 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'    
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuration du modèle utilisateur personnalisé
+AUTH_USER_MODEL = 'utilisateurs.User'
+
 CORS_ALLOW_ALL_ORIGINS = True   
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
