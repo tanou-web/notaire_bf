@@ -297,7 +297,7 @@ class Paiement(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=Q(demande__isnull=False) | Q(vente_sticker__isnull=False),
+                condition=Q(demande__isnull=False) | Q(vente_sticker__isnull=False),
                 name='paiement_demande_ou_vente'
             )
         ]
