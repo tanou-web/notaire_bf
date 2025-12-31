@@ -47,6 +47,7 @@ django-filter==25.2
 django-widget-tweaks==1.5.0
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.1
+drf-yasg==1.21.7
 executing==2.2.0
 fastai==2.8.2
 fastcore==1.8.7
