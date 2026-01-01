@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     # Applications tierces
     'rest_framework',
     'corsheaders',
-    
+    'drf_yasg',
     # Vos applications
     'apps.utilisateurs',
     'apps.geographie',

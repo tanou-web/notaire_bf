@@ -80,15 +80,15 @@ class StatsVisite(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(visites__gte=0),
+                condition=models.Q(visites__gte=0),
                 name='visites_positive'
             ),
             models.CheckConstraint(
-                check=models.Q(pages_vues__gte=0),
+                condition=models.Q(pages_vues__gte=0),
                 name='pages_vues_positive'
             ),
             models.CheckConstraint(
-                check=models.Q(taux_rebond__gte=0) & models.Q(taux_rebond__lte=100),
+                condition=models.Q(taux_rebond__gte=0) & models.Q(taux_rebond__lte=100),
                 name='taux_rebond_valide'
             ),
         ]

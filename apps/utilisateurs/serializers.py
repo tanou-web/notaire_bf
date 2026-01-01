@@ -674,14 +674,14 @@ class PasswordResetSerializer(serializers.Serializer):
     creation d'un administrateur (réservé aux superutilisateurs)
 """
 class AdminCreateSerializer(serializers.ModelSerializer):
-    'sérialiseur pour créer un administrateur (réservé aux superutilisateurs)'
+    """Sérialiseur pour créer un administrateur (réservé aux superutilisateurs)"""
     password = serializers.CharField(
         write_only=True,
         validators=[PasswordStrengthValidator.validate],
         min_length=12
     )
     password_confirmation = serializers.CharField(write_only=True, min_length=12)
-    
+
     class Meta:
         model = User
         fields = [
@@ -689,37 +689,42 @@ class AdminCreateSerializer(serializers.ModelSerializer):
             'nom', 'prenom', 'telephone',
             'is_staff', 'is_superuser'
         ]
-    
+
     def validate(self, data):
-        # Validation de base
+        # Vérifier correspondance des mots de passe
         if data['password'] != data['password_confirmation']:
             raise serializers.ValidationError({
                 "password": "Les mots de passe ne correspondent pas."
             })
-        
-        # Vérifier les permissions de l'utilisateur qui fait la requête
+
+        # Vérifier les permissions du créateur
         request = self.context.get('request')
-        if request and not request.user.is_superuser:
-            # Empêcher un non-superutilisateur de créer un superutilisateur
-            if data.get('is_superuser', False) or data.get('is_staff', False):
-                raise serializers.ValidationError({
-                    "permission": "Vous n'avez pas la permission de créer un administrateur."
-                })
-        
+        first_superuser = not User.objects.filter(is_superuser=True).exists()
+
+        if not first_superuser:
+            if request and not request.user.is_superuser:
+                # Empêcher un non-superutilisateur de créer un admin
+                if data.get('is_superuser', False) or data.get('is_staff', False):
+                    raise serializers.ValidationError({
+                        "permission": "Vous n'avez pas la permission de créer un administrateur."
+                    })
+
         return data
-    
+
     def create(self, validated_data):
         validated_data.pop('password_confirmation')
         password = validated_data.pop('password')
-        
-        # Créer l'utilisateur avec les permissions
+
+        # Détecter si c'est le premier utilisateur
+        first_superuser = not User.objects.filter(is_superuser=True).exists()
+        if first_superuser:
+            validated_data['is_staff'] = True
+            validated_data['is_superuser'] = True
+            validated_data['is_active'] = True
+            validated_data['email_verifie'] = True
+
         user = User.objects.create(**validated_data)
         user.set_password(password)
-        
-        # Si c'est un superutilisateur, activer automatiquement
-        if user.is_superuser:
-            user.is_active = True
-            user.email_verifie = True
-        
         user.save()
+
         return user

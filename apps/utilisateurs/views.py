@@ -279,16 +279,28 @@ class LogoutView(generics.GenericAPIView):
 """
 Vue creation et gestion des administrateurs
 """
+
 class AdminCreateView(generics.CreateAPIView):
-   # Créer un nouvel administrateur (réservé aux superutilisateurs)
+    """Créer un administrateur"""
     serializer_class = AdminCreateSerializer
-    permission_classes = [IsSuperUser]
-    
+
+    def get_permissions(self):
+        # Si aucun superuser n'existe, autoriser la création
+        if not User.objects.filter(is_superuser=True).exists():
+            return [permissions.AllowAny()]
+        return [IsSuperUser()]
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-                
+
+        # Détecter le premier utilisateur
+        is_first_user = User.objects.count() == 0
+        user = serializer.save(
+            is_staff=True if is_first_user else serializer.validated_data.get('is_staff', True),
+            is_superuser=True if is_first_user else serializer.validated_data.get('is_superuser', False),
+        )
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'message': 'Administrateur créé avec succès',
@@ -299,6 +311,7 @@ class AdminCreateView(generics.CreateAPIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         }, status=status.HTTP_201_CREATED)
+
 
 class AdminManagementViewSet(viewsets.ModelViewSet):
     #Gestion des administrateurs (CRUD complet)
