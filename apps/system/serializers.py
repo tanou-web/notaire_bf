@@ -277,4 +277,4 @@ class SystemEmailprofessionnelSerializer(serializers.ModelSerializer):
     def get_utilisateur_display(self, obj):
         if obj.utilisateur:
             return f"{obj.utilisateur.nom} {obj.utilisateur.prenom}" or obj.utilisateur.username
-        return None()
+        return None

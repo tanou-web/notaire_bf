@@ -7,7 +7,7 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 from django.utils import timezone
-
+from django.conf import settings
 
 class DemandesDemande(models.Model):
     STATUT_CHOICES = (
@@ -22,7 +22,12 @@ class DemandesDemande(models.Model):
 
     id = models.AutoField(primary_key=True)
     reference = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    utilisateur = models.ForeignKey('utilisateurs.UtilisateursUser', on_delete=models.SET_NULL, blank=True, null=True)
+    utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='demandes',
+        verbose_name="Utilisateur"
+    )
     document = models.ForeignKey('documents.DocumentsDocument', on_delete=models.CASCADE)
     statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='brouillon')
     donnees_formulaire = models.JSONField(default=dict)

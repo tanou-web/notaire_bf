@@ -107,7 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-       # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -213,10 +213,10 @@ MOOV_MONEY_API_URL = os.getenv('MOOV_MONEY_API_URL', 'https://api.moov-africa.co
 MOOV_MONEY_API_KEY = os.getenv('MOOV_MONEY_API_KEY', '')
 MOOV_MONEY_API_SECRET = os.getenv('MOOV_MONEY_API_SECRET', '')
 MOOV_MONEY_MERCHANT_ID = os.getenv('MOOV_MONEY_MERCHANT_ID', '')
-MOOV_MONEY_CALLBACK_URL = os.getenv('MOOV_MONEY_CALLBACK_URL', 'https://votre-domaine.com/paiement/callback')
+MOOV_MONEY_CALLBACK_URL = os.getenv('MOOV_MONEY_CALLBACK_URL', 'https://notaire-bf-1ns8.onrender.com/api/auth//paiement/callback')
 
 # URL de base de votre application
-BASE_URL = os.getenv('BASE_URL', 'https://votre-domaine.com')
+BASE_URL = os.getenv('BASE_URL', 'https://notaire-bf-1ns8.onrender.com')
 
 SYSTEM_CONFIG = {
     'BACKUP_DIR': '/var/backups/app',
@@ -225,88 +225,16 @@ SYSTEM_CONFIG = {
     'METRIC_RETENTION_DAYS': 30,
 }
 
-# Configuration du logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'audit_file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/audit.log',
-            'formatter': 'audit',
-        },
-        'security_file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/security.log',
-            'formatter': 'detailed',
-        },
         'console': {
-            'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
         },
     },
-    'formatters': {
-        'audit': {
-            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
-        },
-        'detailed': {
-            'format': '[%(asctime)s] %(levelname)s [%(module)s:%(lineno)s] %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
-        },
-        'simple': {
-            'format': '%(levelname)s %(message)s',
-        },
-    },
-    'loggers': {
-        'audit': {
-            'handlers': ['audit_file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'django.security': {
-            'handlers': ['security_file', 'console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-    },
-}
-
-# settings.py
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'logs/ventes.log',
-            'formatter': 'verbose',
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-    },
-    'loggers': {
-        'apps.ventes': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
     },
 }

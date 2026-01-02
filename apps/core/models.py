@@ -117,7 +117,8 @@ class CorePage(models.Model):
     )
     
     auteur = models.ForeignKey(
-        'utilisateurs.UtilisateursUser',
+         settings.AUTH_USER_MODEL,
+
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

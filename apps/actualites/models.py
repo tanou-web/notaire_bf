@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.db.models import F
-
+from django.conf import settings
 
 class ActualitesActualite(models.Model):
     CATEGORIE_CHOICES = [
@@ -20,7 +20,12 @@ class ActualitesActualite(models.Model):
     resume = models.CharField(max_length=500, blank=True, null=True)
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES)
     image_principale = models.CharField(max_length=200, blank=True, null=True)
-    auteur = models.ForeignKey('utilisateurs.UtilisateursUser',on_delete=models.SET_NULL, blank=True, null=True)
+    auteur = models.ForeignKey(
+        settings.AUTH_USER_MODEL,  # <- utilisera 'utilisateurs.User'
+        on_delete=models.CASCADE,
+        related_name='actualites',
+        verbose_name="Auteur"
+    )
     date_publication = models.DateTimeField(blank=True, null=True)
     important = models.BooleanField(default=False)
     publie = models.BooleanField(default=False)
