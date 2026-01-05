@@ -11,7 +11,8 @@ class DocumentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'reference', 'nom', 'description', 
             'prix', 'prix_formate', 'delai_heures', 'delai_heures_display',
-            'actif', 'created_at', 'updated_at'
+            'actif', 'created_at', 'updated_at','fichier',          
+            'fichier_url', 
         ]
         read_only_fields = ['created_at', 'updated_at']
     
@@ -42,9 +43,12 @@ class TexteLegalSerializer(serializers.ModelSerializer):
     def get_fichier_url(self, obj):
         """Générer l'URL complète du fichier"""
         request = self.context.get('request')
-        if request and obj.fichier:
-            return request.build_absolute_uri(obj.fichier)
-        return obj.fichier
+        if obj.fichier and obj.fichier.url:
+            if request:
+                return request.build_absolute_uri(obj.fichier.url)
+            return obj.fichier.url
+        return None
+       
     
     def validate_type_texte(self, value):
         """Validation du type de texte"""

@@ -22,7 +22,6 @@ class DocumentFilter(django_filters.FilterSet):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = DocumentsDocument.objects.all().order_by('nom')
     serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAdminUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = DocumentFilter
     search_fields = ['reference', 'nom', 'description']
@@ -31,18 +30,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
-        return [permission() for permission in super().get_permissions()]
+            permission_classes = [permissions.IsAdminUser]
+        else:
+            permission_classes = [permissions.AllowAny]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         """Par défaut, ne montrer que les documents actifs pour les utilisateurs non authentifiés"""
         queryset = super().get_queryset()
-        
-        # Si l'utilisateur n'est pas admin, ne montrer que les documents actifs
-        if not self.request.user.is_staff and not self.request.user.is_superuser:
+        user = self.request.user
+        if not user.is_authenticated or not user.is_staff:
             queryset = queryset.filter(actif=True)
         
         return queryset
+
     
     @action(detail=False, methods=['get'])
     def actifs(self, request):
