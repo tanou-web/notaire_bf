@@ -5,7 +5,7 @@ from .models import DocumentsDocument, DocumentsTextelegal
 class DocumentSerializer(serializers.ModelSerializer):
     delai_heures_display = serializers.CharField(source='get_delai_heures_display', read_only=True)
     prix_formate = serializers.SerializerMethodField()
-    
+    fichier_url = serializers.SerializerMethodField()
     class Meta:
         model = DocumentsDocument
         fields = [
@@ -25,6 +25,14 @@ class DocumentSerializer(serializers.ModelSerializer):
         if value not in [48, 72]:
             raise serializers.ValidationError("Le délai doit être 48 ou 72 heures")
         return value
+    def get_fichier_url(self, obj):
+        """Générer l'URL complète du fichier"""
+        request = self.context.get('request')
+        if obj.fichier and obj.fichier.url:
+            if request:
+                return request.build_absolute_uri(obj.fichier.url)
+            return obj.fichier.url
+        return None
 
 
 class TexteLegalSerializer(serializers.ModelSerializer):
