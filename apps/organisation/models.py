@@ -40,6 +40,7 @@ class OrganisationMembrebureau(models.Model):
     mandat_fin = models.DateField(blank=True, null=True)
 
     class Meta:
+        managed = True
         db_table = 'organisation_membrebureau'
         verbose_name = 'Membre du Bureau'
         verbose_name_plural = 'Membres du Bureau'
@@ -89,6 +90,7 @@ class OrganisationHistorique(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed = True
         db_table = 'organisation_historique'
         verbose_name = 'Événement Historique'
         verbose_name_plural = 'Historique'
@@ -118,6 +120,7 @@ class OrganisationMission(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed = True
         db_table = 'organisation_mission'
         verbose_name = 'Mission'
         verbose_name_plural = 'Missions'

@@ -22,7 +22,7 @@ class AuditAdminactionlog(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'audit_adminactionlog'
 
 
@@ -66,6 +66,7 @@ class SecurityLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
+        managed = True
         db_table = 'audit_securitylog'
         indexes = [
             models.Index(fields=['timestamp']),
@@ -108,6 +109,7 @@ class LoginAttemptLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
+        managed = True
         db_table = 'audit_loginattempt'
         indexes = [
             models.Index(fields=['username', 'timestamp']),
@@ -127,4 +129,5 @@ class TokenUsageLog(models.Model):
     used_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
+        managed = True
         db_table = 'audit_tokenusage'

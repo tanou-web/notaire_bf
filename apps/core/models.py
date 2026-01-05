@@ -16,7 +16,7 @@ class AuthRole(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_role'
 
 
@@ -26,7 +26,7 @@ class AuthUserrole(models.Model):
     created_at = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_userrole'
         unique_together = (('user', 'role'),)
 
@@ -39,7 +39,7 @@ class CoreConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'core_configuration'
 
 
@@ -130,6 +130,7 @@ class CorePage(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed = True
         db_table = 'core_page'
         verbose_name = 'Page'
         verbose_name_plural = 'Pages'

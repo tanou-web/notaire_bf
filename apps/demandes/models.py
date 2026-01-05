@@ -42,7 +42,7 @@ class DemandesDemande(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'demandes_demande'
         verbose_name = 'Demande'
         verbose_name_plural = 'Demandes'
@@ -96,6 +96,7 @@ class DemandesPieceJointe(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed = True
         db_table = 'demandes_piecejointe'
         verbose_name = 'Pièce jointe'
         verbose_name_plural = 'Pièces jointes'

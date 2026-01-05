@@ -1,23 +1,18 @@
-# apps/demandes/admin.py - VERSION ULTRA SIMPLE ET FONCTIONNELLE
 from django.contrib import admin
-from rest_framework.permissions import IsAdminUser
-from .views import viewsets
+from .models import DemandesDemande, DemandesPieceJointe
 
-class AdminOnlyViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAdminUser]
+@admin.register(DemandesDemande)
+class DemandeAdmin(admin.ModelAdmin):
+    list_display = ('reference', 'statut', 'created_at')
+    list_filter = ('statut', 'created_at')
+    search_fields = ('reference', 'email_reception')
+    readonly_fields = ('created_at', 'updated_at')
 
-# Import sécurisé
-try:
-    from .models import DemandesDemande
-except ImportError:
-    # Si le modèle n'existe pas, ne rien faire
-    DemandesDemande = None
-
-if DemandesDemande:
-    @admin.register(DemandesDemande)
-    class DemandeAdmin(admin.ModelAdmin):
-        """Admin ultra simple pour les demandes"""
-        list_display = ('reference', 'statut', 'created_at')
-        list_filter = ('statut', 'created_at')
-        search_fields = ('reference',  'client_email')
-        readonly_fields = ('created_at', 'updated_at')
+@admin.register(DemandesPieceJointe)
+class PieceJointeAdmin(admin.ModelAdmin):
+    list_display = ('demande', 'type_piece', 'nom_original', 'taille_formatee', 'created_at')
+    readonly_fields = ('created_at', 'updated_at', 'nom_original', 'taille_fichier')
+    fieldsets = (
+        ('Informations', {'fields': ('demande', 'type_piece', 'fichier', 'description')}),
+        ('Détails', {'fields': ('nom_original', 'taille_fichier', 'created_at', 'updated_at'), 'classes': ('collapse',)}),
+    )

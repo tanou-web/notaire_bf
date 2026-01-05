@@ -3,8 +3,6 @@ from django.conf import settings
 from datetime import datetime, timedelta
 import json
 import logging
-import hashlib
-import secrets
 from cryptography.fernet import Fernet
 import psutil
 import socket
@@ -527,21 +525,3 @@ class SecurityService:
         alphabet = string.ascii_letters + string.digits + string.punctuation
         return ''.join(secrets.choice(alphabet) for _ in range(length))
     
-    @staticmethod
-    def hash_password(password):
-        """Hash un mot de passe."""
-        salt = secrets.token_hex(16)
-        hash_obj = hashlib.sha256()
-        hash_obj.update(f"{salt}{password}".encode())
-        return f"{salt}:{hash_obj.hexdigest()}"
-    
-    @staticmethod
-    def verify_password(password, hashed):
-        """Vérifie un mot de passe hashé."""
-        try:
-            salt, stored_hash = hashed.split(':')
-            hash_obj = hashlib.sha256()
-            hash_obj.update(f"{salt}{password}".encode())
-            return hash_obj.hexdigest() == stored_hash
-        except:
-            return False

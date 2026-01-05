@@ -35,7 +35,7 @@ class ActualitesActualite(models.Model):
     updated_at = models.DateTimeField(editable=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'actualites_actualite'
         verbose_name = 'Actualité'
         verbose_name_plural = 'Actualités'

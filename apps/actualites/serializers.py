@@ -20,7 +20,7 @@ class ActualiteAuteurSerializer(serializers.ModelSerializer):
 
 class ActualiteSerializer(serializers.ModelSerializer):
     auteur_detail = ActualiteAuteurSerializer(source='auteur', read_only=True)
-    categorie_display = serializers.CharField(source='categorie_display', read_only=True)
+    categorie_display = serializers.CharField(read_only=True)
     est_publiee = serializers.SerializerMethodField()
     resume_auto = serializers.CharField(read_only=True)
     temps_lecture = serializers.SerializerMethodField()
@@ -77,6 +77,9 @@ class ActualiteSerializer(serializers.ModelSerializer):
             validated_data['date_publication'] = timezone.now()
         
         return super().create(validated_data)
+    
+    def get_categorie_display(self, obj):
+        return obj.categorie_display
 
 
 class ActualiteListSerializer(serializers.ModelSerializer):

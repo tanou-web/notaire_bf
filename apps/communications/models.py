@@ -26,7 +26,7 @@ class CommunicationsEmaillog(models.Model):
     updated_at = models.DateTimeField()
     public_reference = models.CharField(max_length=50,null=True,blank=True)
     class Meta:
-        managed = False
+        managed = True
         db_table = 'communications_emaillog'
         indexes = [
             models.Index(fields=['destinataire']),

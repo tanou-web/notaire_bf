@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-
+from apps.system.serializers import SystemStatsSerializer
 from .models import (
     SystemConfig, SystemLog, MaintenanceWindow, SystemMetric,
     APIKey, ScheduledTask, SystemHealth, SystemNotification,

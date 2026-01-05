@@ -11,6 +11,15 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
+'''
+# Configuration sécurisée des hôtes autorisés
+ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+else:
+    # En développement uniquement
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0'] if not DEBUG else ['*']
+'''
 # Application definition
 INSTALLED_APPS = [
    'django.contrib.admin',
@@ -19,7 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'django_filters',
+
     # Applications tierces
     'rest_framework',
     'corsheaders',
@@ -155,7 +165,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configuration du modèle utilisateur personnalisé
 AUTH_USER_MODEL = 'utilisateurs.User'
 
-CORS_ALLOW_ALL_ORIGINS = True   
+# Configuration CORS sécurisée
+CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if CORS_ALLOWED_ORIGINS_ENV:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    # En développement uniquement
+    CORS_ALLOW_ALL_ORIGINS = DEBUG
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -171,6 +189,23 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = [
     'Content-Disposition',
 ]
+
+# Configurations de sécurité pour la production
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() == 'true'
+SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
+
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)).lower() == 'true'
+
+# Sécuriser les cookies en production
+if not DEBUG:
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 
 # Configuration Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

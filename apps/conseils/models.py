@@ -12,11 +12,11 @@ class ConseilsConseildujour(models.Model):
     conseil = models.TextField()
     date = models.DateField(unique=True)
     actif = models.BooleanField(default=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     public_reference = models.CharField(max_length=50,null=True,blank=True)
     class Meta:
-        managed = False
+        managed = True
         db_table = 'conseils_conseildujour'
         db_table_comment = "Conseil du jour pour page d'accueil"
         indexes = [

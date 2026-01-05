@@ -26,7 +26,7 @@ class NotairesNotaire(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'notaires_notaire'
 
     def __str__(self):
@@ -50,7 +50,7 @@ class NotairesCotisation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'notaires_cotisation'
         unique_together = (('notaire', 'annee'),)
     def __str__(self):

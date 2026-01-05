@@ -5,6 +5,7 @@ from .models import (
     APIKey, ScheduledTask, SystemHealth, SystemNotification
 )
 
+from .models import SystemEmailprofessionnel
 
 @admin.register(SystemConfig)
 class SystemConfigAdmin(admin.ModelAdmin):
@@ -114,6 +115,40 @@ class SystemHealthAdmin(admin.ModelAdmin):
         color = colors.get(obj.status, 'black')
         return format_html('<span style="color: {};">{}</span>', color, obj.get_status_display())
     status_display.short_description = 'Statut'
+
+@admin.register(SystemEmailprofessionnel)
+class SystemEmailprofessionnelAdmin(admin.ModelAdmin):
+    list_display = (
+        'email',
+        'role',
+        'provider',
+        'utilisateur',
+        'actif',
+        'est_alias_display',
+        'created_at',
+    )
+    list_filter = ('role', 'provider', 'actif')
+    search_fields = ('email', 'description', 'utilisateur__username')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Email', {
+            'fields': ('email', 'role', 'provider', 'description')
+        }),
+        ('Utilisation', {
+            'fields': ('utilisateur', 'alias_pour')
+        }),
+        ('Permissions', {
+            'fields': ('peut_envoyer', 'peut_recevoir', 'actif')
+        }),
+        ('Métadonnées', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+    def est_alias_display(self, obj):
+        return "Oui" if obj.est_alias() else "Non"
+    est_alias_display.short_description = "Alias"
 
 
 @admin.register(SystemNotification)

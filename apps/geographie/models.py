@@ -13,11 +13,11 @@ class GeographieRegion(models.Model):
     code = models.CharField(unique=True, max_length=10)
     description = models.TextField(blank=True, null=True)
     ordre = models.IntegerField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'geographie_region'
 
 
@@ -25,10 +25,10 @@ class GeographieVille(models.Model):
     region = models.ForeignKey(GeographieRegion, models.DO_NOTHING)
     nom = models.CharField(max_length=100)
     code_postal = models.CharField(max_length=10, blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'geographie_ville'
         unique_together = (('region', 'nom'),)

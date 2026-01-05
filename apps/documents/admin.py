@@ -4,7 +4,7 @@ from django.utils.html import format_html
 
 @admin.register(DocumentsDocument)
 class DocumentsDocumentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'reference', 'nom', 'prix_formate','delai_affichage', 'actif', 'created_at', 'updated_at')
+    list_display = ('id', 'reference', 'nom', 'prix_formate','delai_affichage', 'actif', 'created_at', 'updated_at','fichier_lien')
     list_filter = ('actif', 'delai_heures', 'created_at', 'updated_at')
     search_fields = ('reference', 'nom', 'description')
     list_editable = ('actif',)
@@ -18,6 +18,9 @@ class DocumentsDocumentAdmin(admin.ModelAdmin):
         ('Tarification et délai', {
             'fields': ('prix', 'delai_heures')
         }),
+        ('Fichier', {
+            'fields': ('fichier',)
+        }),
         ('Dates',{
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -29,8 +32,16 @@ class DocumentsDocumentAdmin(admin.ModelAdmin):
     prix_formate.short_description = 'Prix (FCFA)'
 
     def delai_affichage(self, obj):
-        return obj.get_delai_display()
+        delai_heures_display = obj.get_delai_heures_display()
+        return delai_heures_display if delai_heures_display else 'Non défini'
     delai_affichage.short_description = 'Délai'
+
+
+    def fichier_lien(self, obj):
+        if obj.fichier:
+            return format_html('<a href="{}" target="_blank">Télécharger</a>', obj.fichier.url)
+        return "Aucun fichier"
+    fichier_lien.short_description = 'Fichier PDF'
 
 @admin.register(DocumentsTextelegal)
 class DocumentsTextelegalAdmin(admin.ModelAdmin):
@@ -38,7 +49,7 @@ class DocumentsTextelegalAdmin(admin.ModelAdmin):
     list_filter = ('type_texte', 'date_publication', 'created_at')
     search_fields = ('reference', 'titre', 'type_texte')
     ordering = ('type_texte', 'ordre', 'titre')
-    
+    readonly_fields = ('created_at', 'updated_at') 
     fieldsets = (
         ('Informations', {
             'fields': ('type_texte', 'reference', 'titre')

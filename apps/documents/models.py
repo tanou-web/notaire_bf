@@ -23,9 +23,16 @@ class DocumentsDocument(models.Model):
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    fichier = models.FileField(
+    upload_to='documents/%Y/%m/',
+    blank=True,
+    null=True,
+    verbose_name="Fichier PDF"
+    )
+
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'documents_document'
 
     def __str__(self):
@@ -44,14 +51,18 @@ class DocumentsTextelegal(models.Model):
     type_texte = models.CharField(max_length=50, choices=TYPE_CHOICES)
     reference = models.CharField(max_length=100, blank=True, null=True)
     titre = models.CharField(max_length=200)
-    fichier = models.CharField(max_length=200)
+    fichier = models.FileField(
+        upload_to='texte_legaux/%Y/%m/',
+        blank=True,
+        null=True
+    )
     date_publication = models.DateField(blank=True, null=True)
     ordre = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'documents_textelegal'
 
     def __str__(self):

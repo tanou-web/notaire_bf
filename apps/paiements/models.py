@@ -26,6 +26,7 @@ class PaiementsTransaction(models.Model):
     date_validation = models.DateTimeField(blank=True, null=True)
 
     class Meta:
+        managed = True
         db_table = 'paiements_transaction'
         verbose_name = 'Transaction de paiement'
         verbose_name_plural = 'Transactions de paiement'
