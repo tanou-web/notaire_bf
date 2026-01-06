@@ -10,7 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['*']
+#ALLOWED_HOSTS = ['*']
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com']
 
 # Configuration sécurisée des hôtes autorisés
 ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
