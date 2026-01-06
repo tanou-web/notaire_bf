@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
-'''
+
 # Configuration sécurisée des hôtes autorisés
 ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
 if ALLOWED_HOSTS_ENV:
@@ -19,7 +19,7 @@ if ALLOWED_HOSTS_ENV:
 else:
     # En développement uniquement
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0'] if not DEBUG else ['*']
-'''
+
 # Application definition
 INSTALLED_APPS = [
    'django.contrib.admin',
@@ -165,7 +165,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuration du modèle utilisateur personnalisé
 AUTH_USER_MODEL = 'utilisateurs.User'
-
+'''
 # Configuration CORS sécurisée
 CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
 if CORS_ALLOWED_ORIGINS_ENV:
@@ -220,8 +220,8 @@ CORS_EXPOSE_HEADERS = [
     'Content-Disposition',
     'X-Total-Count',
     'X-Page-Count',
-]
-
+]'''
+CORS_ALLOW_ALL_ORIGINS = True
 # Configurations de sécurité pour la production
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
