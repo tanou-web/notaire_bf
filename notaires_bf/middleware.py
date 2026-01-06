@@ -7,8 +7,71 @@ from django.urls import resolve, Resolver404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import APIException
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
 logger = logging.getLogger(__name__)
+
+class JWTTokenRefreshMiddleware:
+    """
+    Middleware pour gérer automatiquement le rafraîchissement des tokens JWT expirés.
+    Intercepte les erreurs de token expiré et tente de les rafraîchir automatiquement.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Vérifier si c'est une erreur de token expiré
+        if (response.status_code == 401 and
+            hasattr(response, 'data') and
+            isinstance(response.data, dict) and
+            response.data.get('code') == 'token_not_valid'):
+
+            # Tenter de rafraîchir automatiquement le token
+            refresh_response = self._try_refresh_token(request)
+            if refresh_response:
+                return refresh_response
+
+        return response
+
+    def _try_refresh_token(self, request):
+        """
+        Tente de rafraîchir le token en utilisant le refresh token dans les cookies ou headers
+        """
+        try:
+            # Chercher le refresh token dans les cookies
+            refresh_token = request.COOKIES.get('refresh_token')
+
+            # Ou dans l'Authorization header (format: Bearer <access_token> <refresh_token>)
+            if not refresh_token:
+                auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+                if auth_header.startswith('Bearer '):
+                    parts = auth_header.split()
+                    if len(parts) >= 3:
+                        refresh_token = parts[2]  # Le refresh token serait en 3ème position
+
+            if refresh_token:
+                # Valider et utiliser le refresh token
+                refresh = RefreshToken(refresh_token)
+                new_access_token = str(refresh.access_token)
+
+                # Créer une nouvelle réponse avec le nouveau token
+                return JsonResponse({
+                    'detail': 'Token rafraîchi automatiquement',
+                    'access': new_access_token,
+                    'refresh': str(refresh) if settings.SIMPLE_JWT['ROTATE_REFRESH_TOKENS'] else refresh_token
+                }, status=200)
+
+        except (TokenError, InvalidToken) as e:
+            logger.warning(f"Échec du rafraîchissement automatique du token: {str(e)}")
+        except Exception as e:
+            logger.error(f"Erreur lors du rafraîchissement automatique: {str(e)}")
+
+        return None
+
 
 class ExceptionMiddleware:
     """

@@ -52,13 +52,31 @@ class IsAdminUser(permissions.BasePermission):
         return bool(request.user and (request.user.is_staff or request.user.is_superuser))
 
 class IsOwnerOrAdmin(permissions.BasePermission):
-   
+
     #Permission qui autorise le propriétaire ou les administrateurs.
-    
+
     def has_object_permission(self, request, view, obj):
         # Les administrateurs peuvent tout faire
         if request.user and (request.user.is_staff or request.user.is_superuser):
             return True
-        
+
         # L'utilisateur peut modifier son propre objet
         return obj == request.user
+
+class IsNotaireOrAdmin(permissions.BasePermission):
+    """
+    Permission qui autorise :
+    - Le notaire lui-même à accéder à ses propres données
+    - Les administrateurs à accéder à toutes les données des notaires
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Les administrateurs peuvent tout faire
+        if request.user and (request.user.is_staff or request.user.is_superuser):
+            return True
+
+        # Vérifier si l'utilisateur est le notaire concerné
+        if hasattr(request.user, 'notaire_profile') and request.user.notaire_profile == obj:
+            return True
+
+        return False

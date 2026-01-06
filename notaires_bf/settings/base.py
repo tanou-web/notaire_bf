@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'notaires_bf.middleware.JWTTokenRefreshMiddleware',
 ]
 ROOT_URLCONF = 'notaires_bf.urls'
 TEMPLATES = [
@@ -135,9 +136,9 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),  # Augmenté à 2 heures
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Augmenté à 7 jours
+    'ROTATE_REFRESH_TOKENS': True,  # Rotation automatique des refresh tokens
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
@@ -171,23 +172,54 @@ if CORS_ALLOWED_ORIGINS_ENV:
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
     CORS_ALLOW_ALL_ORIGINS = False
 else:
-    # En développement uniquement
-    CORS_ALLOW_ALL_ORIGINS = DEBUG
+    # Configuration flexible pour développement et production
+    if DEBUG:
+        # En développement : autoriser localhost et autres origines communes
+        CORS_ALLOWED_ORIGINS = [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:3001',
+            'http://localhost:8080',
+            'http://127.0.0.1:8080',
+            'http://localhost:5173',  # Vite dev server
+            'http://127.0.0.1:5173',
+        ]
+        CORS_ALLOW_ALL_ORIGINS = True  # Plus permissif en dev
+    else:
+        # En production : origines spécifiques seulement
+        CORS_ALLOWED_ORIGINS = [
+            'https://votredomaine.com',
+            'https://www.votredomaine.com',
+        ]
+        CORS_ALLOW_ALL_ORIGINS = False
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
     'authorization',
     'content-type',
     'dnt',
-    'origin',       
+    'origin',
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-api-key',
+    'cache-control',
 ]
 CORS_EXPOSE_HEADERS = [
     'Content-Disposition',
+    'X-Total-Count',
+    'X-Page-Count',
 ]
 
 # Configurations de sécurité pour la production

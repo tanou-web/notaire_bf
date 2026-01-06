@@ -25,6 +25,7 @@ from rest_framework import permissions
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
+    TokenVerifyView,
 )
 #Documentation Swagger
 schema_view = get_schema_view(
@@ -48,6 +49,7 @@ urlpatterns = [
     #JWT Auth
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     #API Applications
     path('api/auth/', include('apps.utilisateurs.urls')),
     path('api/geographie/', include('apps.geographie.urls')),

@@ -8,6 +8,7 @@ from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 
+
 from .models import NotairesNotaire, NotairesCotisation
 from .serializers import (
     NotaireSerializer, NotaireMinimalSerializer,
@@ -49,7 +50,6 @@ class NotaireViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Optimiser les requêtes selon l'action"""
         queryset = super().get_queryset()
-        
         # Pour la liste, on précharge les relations nécessaires
         if self.action == 'list':
             queryset = queryset.select_related('region', 'ville')
@@ -57,10 +57,9 @@ class NotaireViewSet(viewsets.ModelViewSet):
         # Filtrer les notaires inactifs si pas admin
         if not self.request.user.is_staff:
             queryset = queryset.filter(actif=True)
-        
         return queryset
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def demandes(self, request, pk=None):
         """Récupérer les demandes assignées à un notaire"""
         notaire = self.get_object()
@@ -86,7 +85,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
                 'detail': 'Module demandes non disponible'
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def statistiques(self, request, pk=None):
         """Récupérer les statistiques détaillées d'un notaire"""
         notaire = self.get_object()
@@ -183,7 +182,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
                 }
             })
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def cotisations(self, request, pk=None):
         """Récupérer les cotisations d'un notaire"""
         notaire = self.get_object()
