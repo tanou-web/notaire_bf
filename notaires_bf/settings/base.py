@@ -17,15 +17,15 @@ ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com']
 else:
     ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com']
 '''
-# Configuration sécurisée des hôtes autorisés
+'''# Configuration sécurisée des hôtes autorisés
 ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
 if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 else:
     # En développement uniquement
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0'] if not DEBUG else ['*']
-
-# Application definition
+'''
+# Applicati'on definition
 INSTALLED_APPS = [
    'django.contrib.admin',
     'django.contrib.auth',
