@@ -5,17 +5,17 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from django.core.cache import cache
-import re
-import hashlib
-import secrets
-import string
-from datetime import timedelta, datetime
+from datetime import timedelta,datetime
 from .models import VerificationVerificationtoken
+import hashlib
+import string
+import secrets
+import re
+from django.core.mail import send_mail
+
 
 User = get_user_model()
-
-# ==================== VALIDATEURS DE SÉCURITÉ ====================
-
+# Liste des mots de passe trop communs
 BANNED_PASSWORDS = [
     'password123', '12345678', 'azerty123', 'qwerty123',
     'notairesbf', 'notaires2024', 'admin123', 'user123'
@@ -28,8 +28,8 @@ class PasswordStrengthValidator:
     def validate(password, user=None):
         errors = []
         
-        if len(password) < 12:
-            errors.append("Le mot de passe doit contenir au moins 12 caractères.")
+        if len(password) < 8:
+            errors.append("Le mot de passe doit contenir au moins 8 caractères.")
         
         if not re.search(r'[A-Z]', password):
             errors.append("Le mot de passe doit contenir au moins une majuscule.")
@@ -139,12 +139,11 @@ class UserSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)
-        user = User.objects.create(**validated_data)
+        user = User(**validated_data)
         
         if password:
             user.set_password(password)
-            user.save()
-        
+        user.save()        
         return user
     
     def update(self, instance, validated_data):
@@ -210,8 +209,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         
         reserved_usernames = ['admin', 'root', 'superuser', 'system']
         if value.lower() in reserved_usernames:
-            raise serializers.ValidationError("Ce nom d'utilisateur est réservé.")
-        
+            raise serializers.ValidationError("Ce nom d'utilisateur est réservé.")        
         return value
     
     def validate(self, data):
@@ -287,14 +285,23 @@ class SendVerificationSerializer(serializers.Serializer):
         # Rate limiting par IP
         request = self.context.get('request')
         if request:
-            ip_address = request.META.get('REMOTE_ADDR')
+
+            def get_client_ip(request):
+                x_frowarded_for = request.META.get('HTTP_XFORWARDED_FOR')
+                if x_frowarded_for:
+                    return x_frowarded_for.split(',')[0]
+                return request.META.get('REMOTE_ADDR')
+
+            ip_address = get_client_ip(request)
+
+            
             cache_key = f"verification_send_{ip_address}"
             attempts = cache.get(cache_key, [])
             
             current_time = timezone.now()
             attempts = [t for t in attempts if current_time - t < timedelta(hours=1)]
             
-            if len(attempts) >= 10:
+            if len(attempts) >= 4:
                 raise serializers.ValidationError({
                     "rate_limit": "Trop de tentatives. Veuillez réessayer dans 1 heure."
                 })
@@ -344,7 +351,7 @@ class SendVerificationSerializer(serializers.Serializer):
             user=user,
             token=token_hash,
             type_token=verification_type,
-            expires_at=timezone.now() + timedelta(minutes=15),
+            expires_at=timezone.now() + timedelta(minutes=5),
             data={
                 'ip_address': request.META.get('REMOTE_ADDR') if request else None,
                 'user_agent': request.META.get('HTTP_USER_AGENT') if request else None,
@@ -366,7 +373,6 @@ class SendVerificationSerializer(serializers.Serializer):
     
     def _send_email_verification(self, user, token, email):
         """Envoyer un email de vérification"""
-        from django.core.mail import send_mail
         
         subject = f"Code de vérification - Ordre des Notaires BF"
         message = f"""
@@ -374,9 +380,8 @@ class SendVerificationSerializer(serializers.Serializer):
         
         Votre code de vérification est : {token}
         
-        Ce code expirera dans 15 minutes.
+        Ce code expirera dans 5 minutes.
         
-        Si vous n'avez pas demandé cette vérification, veuillez ignorer cet email.
         
         Cordialement,
         L'équipe de l'Ordre des Notaires du Burkina Faso
@@ -424,7 +429,7 @@ class VerifyTokenSerializer(serializers.Serializer):
             cache_key = f"verification_attempt_{ip_address}_{token}"
             attempts = cache.get(cache_key, 0)
             
-            if attempts >= 5:
+            if attempts >= 3:
                 raise serializers.ValidationError({
                     "rate_limit": "Trop de tentatives échouées. Veuillez demander un nouveau code."
                 })
@@ -728,3 +733,33 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+class LoginSerializer(serializers.Serializer):
+    """
+    Serializer pour l'authentification utilisateur
+    """
+    username = serializers.CharField(
+        required=True,
+        label="Nom d'utilisateur ou Email",
+        help_text="Entrez votre nom d'utilisateur ou votre adresse email"
+    )
+    password = serializers.CharField(
+        required=True,
+        write_only=True,
+        label="Mot de passe",
+        help_text="Entrez votre mot de passe",
+        style={'input_type': 'password'}
+    )
+
+    def validate_username(self, value):
+        """Validation du champ username"""
+        if not value:
+            raise serializers.ValidationError("Le nom d'utilisateur est requis.")
+        return value
+
+    def validate_password(self, value):
+        """Validation du champ password"""
+        if not value:
+            raise serializers.ValidationError("Le mot de passe est requis.")
+        return value

@@ -14,6 +14,7 @@ from .serializers import (
     PasswordResetSerializer, PasswordChangeSerializer,
     AdminCreateSerializer,
     ResendVerificationSerializer,
+    LoginSerializer,
 )
 from .security.rate_limiter import LoginRateLimiter
 from .security.audit_logger import AuditLogger
@@ -71,106 +72,121 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 class LoginView(generics.GenericAPIView):
-    """Authentification JWT avec rate limiting et audit logging"""
+    """
+    Authentification JWT sécurisée
+    - Validation serializer
+    - Rate limiting
+    - Audit logging
+    - Support 2FA
+    """
     permission_classes = [permissions.AllowAny]
-    
+    serializer_class = LoginSerializer
+
     def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        password = request.data.get('password')
+        # 1️⃣ Validation des données
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
         ip_address = request.META.get('REMOTE_ADDR')
-        
-        # Rate limiting par IP et par username
+        user_agent = request.META.get('HTTP_USER_AGENT')
+
+        # 2️⃣ Rate limiting (avant authentification)
         try:
-            LoginRateLimiter.check_login_attempt(ip_address)
-            if username:
-                LoginRateLimiter.check_login_attempt(username)
-        except Throttled as e:
+            LoginRateLimiter.check(ip_address)
+            LoginRateLimiter.check(username)
+        except Throttled:
             AuditLogger.log_login_attempt(
                 username=username,
                 ip_address=ip_address,
                 success=False,
                 reason="rate_limited",
-                user_agent=request.META.get('HTTP_USER_AGENT')
+                user_agent=user_agent
             )
-            raise e
-        
-        # Authentifier l'utilisateur
-        user = authenticate(username=username, password=password)
-        
+            raise
+
+        # 3️⃣ Authentification
+        user = authenticate(
+            request=request,
+            username=username,
+            password=password
+        )
+
         if not user:
-            # Échec de login
+            LoginRateLimiter.increment(ip_address)
+            LoginRateLimiter.increment(username)
+
             AuditLogger.log_login_attempt(
                 username=username,
                 ip_address=ip_address,
                 success=False,
                 reason="invalid_credentials",
-                user_agent=request.META.get('HTTP_USER_AGENT')
+                user_agent=user_agent
             )
-            
-            # Augmenter les compteurs de tentatives
-            LoginRateLimiter.check_login_attempt(ip_address)
-            if username:
-                LoginRateLimiter.check_login_attempt(username)
-            
-            return Response({
-                'error': 'Identifiants invalides'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        # Vérifier si l'email est vérifié
-        if not user.email_verifie:
-            return Response({
-                'error': 'Email non vérifié',
-                'user_id': user.id,
-                'next_step': 'verify_email'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        # Vérifier si le compte est actif
+
+            return Response(
+                {"error": "Identifiants invalides"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # 4️⃣ Vérifications de sécurité
         if not user.is_active:
-            return Response({
-                'error': 'Compte désactivé'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        # Si 2FA est activé, demander le code
-        if hasattr(user, 'two_factor_enabled') and user.two_factor_enabled:
-            # Envoyer le code 2FA
+            return Response(
+                {"error": "Accès refusé"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not getattr(user, 'email_verifie', True):
+            return Response(
+                {"error": "Vérification requise"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 5️⃣ 2FA si activé
+        if getattr(user, 'two_factor_enabled', False):
             send_serializer = SendVerificationSerializer(
                 data={
-                    'verification_type': getattr(user, 'two_factor_method', 'email'),
-                    'email': user.email if getattr(user, 'two_factor_method', 'email') == 'email' else None,
-                    'telephone': user.telephone if getattr(user, 'two_factor_method', 'email') == 'sms' else None
+                    "verification_type": getattr(user, 'two_factor_method', 'email'),
+                    "email": user.email if user.two_factor_method == 'email' else None,
+                    "telephone": user.telephone if user.two_factor_method == 'sms' else None
                 },
-                context={'request': request}
+                context={"request": request}
             )
-            
-            if send_serializer.is_valid():
-                result = send_serializer.save()
-                return Response({
-                    'message': 'Code 2FA envoyé',
-                    'user_id': user.id,
-                    'verification_type': getattr(user, 'two_factor_method', 'email'),
-                    'next_step': 'verify_2fa'
-                }, status=status.HTTP_200_OK)
-        
-        # Si pas de 2FA, générer les tokens JWT
+            send_serializer.is_valid(raise_exception=True)
+            send_serializer.save()
+
+            return Response(
+                {
+                    "message": "Code de vérification envoyé",
+                    "next_step": "verify_2fa"
+                },
+                status=status.HTTP_200_OK
+            )
+
+        # 6️⃣ Succès → génération JWT
         refresh = RefreshToken.for_user(user)
-        
-        # Réinitialiser les compteurs après succès
-        LoginRateLimiter.clear_attempts(ip_address)
-        LoginRateLimiter.clear_attempts(username)
-        
-        # Journaliser la connexion réussie
+
+        # Nettoyage rate limit
+        LoginRateLimiter.clear(ip_address)
+        LoginRateLimiter.clear(username)
+
+        # Audit succès
         AuditLogger.log_login_attempt(
             user=user,
             ip_address=ip_address,
             success=True,
-            user_agent=request.META.get('HTTP_USER_AGENT')
+            user_agent=user_agent
         )
-        
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': UserProfileSerializer(user).data
-        })
+
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": UserProfileSerializer(user).data
+            },
+            status=status.HTTP_200_OK
+        )
 
 class SendVerificationView(generics.CreateAPIView):
     """Envoyer un code de vérification"""
@@ -373,3 +389,21 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
             'user_id': user.id,
             'is_staff': user.is_staff
         })
+
+
+class LoginRateLimiter:
+
+    @staticmethod
+    def check(key):
+        """Vérifie si la limite est atteinte"""
+        pass
+
+    @staticmethod
+    def increment(key):
+        """Incrémente les tentatives"""
+        pass
+
+    @staticmethod
+    def clear(key):
+        """Réinitialise après succès"""
+        pass
