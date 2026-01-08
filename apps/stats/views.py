@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import json
 import csv
 from django.http import HttpResponse
-
+from .filters import StatsVisiteFilter
 from .models import (
     StatsVisite,    
     PageVue,        
@@ -42,7 +42,7 @@ class StatsVisiteViewSet(viewsets.ModelViewSet):
     serializer_class = StatsVisiteSerializer
     permission_classes = [IsAuthenticated, CanViewStats]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['date', 'est_weekend']
+    filterset_class = StatsVisiteFilter
     search_fields = ['date', 'jour_semaine']
     ordering_fields = ['date', 'visites', 'pages_vues', 'created_at']
     ordering = ['-date']

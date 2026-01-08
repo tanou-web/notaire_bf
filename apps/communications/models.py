@@ -35,3 +35,43 @@ class CommunicationsEmaillog(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['updated_at']),
         ]
+
+
+class CommunicationsSmslog(models.Model):
+    destinataire = models.CharField(max_length=20, help_text="Numéro de téléphone du destinataire")
+    message = models.TextField(help_text="Contenu du SMS")
+    fournisseur = models.CharField(max_length=50, help_text="Fournisseur SMS utilisé (aqilas, orange, moov)")
+    sender_id = models.CharField(max_length=20, blank=True, null=True, help_text="ID de l'expéditeur")
+
+    STATUS_CHOICES = [
+        ('envoye', 'Envoyé'),
+        ('echec', 'Échec'),
+        ('en_attente', 'En attente'),
+        ('delivre', 'Livré'),
+        ('non_delivre', 'Non délivré'),
+    ]
+    statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='en_attente')
+
+    message_id = models.CharField(max_length=200, blank=True, null=True, help_text="ID du message retourné par l'API")
+    erreur = models.TextField(blank=True, null=True, help_text="Message d'erreur en cas d'échec")
+    cout_sms = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, help_text="Coût du SMS en FCFA")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    public_reference = models.CharField(max_length=50, null=True, blank=True, help_text="Référence publique pour tracking")
+
+    class Meta:
+        managed = True
+        db_table = 'communications_smslog'
+        indexes = [
+            models.Index(fields=['destinataire']),
+            models.Index(fields=['statut']),
+            models.Index(fields=['fournisseur']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"SMS vers {self.destinataire} - {self.statut}"

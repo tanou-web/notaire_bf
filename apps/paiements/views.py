@@ -6,6 +6,7 @@ from django.db import transaction
 from .models import PaiementsTransaction
 from .serializers import PaiementSerializer, PaiementCreateSerializer
 from apps.demandes.models import DemandesDemande
+from apps.communications.services import SMSService
 
 
 class PaiementViewSet(viewsets.ReadOnlyModelViewSet):
@@ -62,6 +63,26 @@ class PaiementWebhookAPIView(APIView):
                 demande = tx.demande
                 demande.statut = 'en_attente_traitement'
                 demande.save()
+
+                # Envoyer un SMS de confirmation de paiement
+                try:
+                    # Récupérer le numéro de téléphone du demandeur
+                    user_phone = None
+                    if hasattr(demande, 'demandeur') and demande.demandeur:
+                        user_phone = getattr(demande.demandeur, 'telephone', None)
+
+                    if user_phone:
+                        SMSService.send_payment_confirmation_sms(
+                            phone_number=user_phone,
+                            transaction_reference=tx.reference,
+                            amount=str(tx.montant),
+                            user_name=getattr(demande.demandeur, 'nom', None)
+                        )
+                except Exception as e:
+                    # Ne pas échouer le webhook si l'envoi SMS échoue
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Erreur envoi SMS confirmation paiement {tx.reference}: {e}")
             else:
                 tx.save()
 
@@ -356,11 +377,31 @@ class VerifierPaiementView(APIView):
                     
                     if new_status == 'reussi' and old_status != 'reussi':
                         transaction.date_validation = timezone.now()
-                        
+
                         # Mettre à jour le statut de la demande
                         demande = transaction.demande
                         demande.statut = 'en_attente_traitement'
                         demande.save()
+
+                        # Envoyer un SMS de confirmation de paiement
+                        try:
+                            # Récupérer le numéro de téléphone du demandeur
+                            user_phone = None
+                            if hasattr(demande, 'demandeur') and demande.demandeur:
+                                user_phone = getattr(demande.demandeur, 'telephone', None)
+
+                            if user_phone:
+                                SMSService.send_payment_confirmation_sms(
+                                    phone_number=user_phone,
+                                    transaction_reference=transaction.reference,
+                                    amount=str(transaction.montant),
+                                    user_name=getattr(demande.demandeur, 'nom', None)
+                                )
+                        except Exception as e:
+                            # Ne pas échouer la vérification si l'envoi SMS échoue
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.error(f"Erreur envoi SMS confirmation paiement {transaction.reference}: {e}")
                     
                     # Mettre à jour les données API
                     verification_data = transaction.donnees_api or {}

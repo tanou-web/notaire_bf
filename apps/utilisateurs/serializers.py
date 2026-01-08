@@ -12,6 +12,7 @@ import string
 import secrets
 import re
 from django.core.mail import send_mail
+from apps.communications.services import SMSService
 
 
 User = get_user_model()
@@ -400,8 +401,18 @@ class SendVerificationSerializer(serializers.Serializer):
     
     def _send_sms_verification(self, user, token, telephone):
         """Envoyer un SMS de vérification"""
-        print(f"SMS envoyé à {telephone}: Code de vérification: {token}")
-        # TODO: Implémenter avec votre API SMS
+        try:
+            success, message_id, error = SMSService.send_verification_sms(
+                phone_number=telephone,
+                token=token,
+                user_name=user.get_full_name() if user else None
+            )
+            if not success:
+                # Log l'erreur mais ne bloque pas le processus
+                print(f"Erreur envoi SMS à {telephone}: {error}")
+        except Exception as e:
+            print(f"Exception lors de l'envoi SMS à {telephone}: {e}")
+            # Ne pas lever d'exception pour ne pas bloquer le processus d'inscription
 
 class VerifyTokenSerializer(serializers.Serializer):
     TYPE_CHOICES = [
@@ -633,8 +644,17 @@ class ResendVerificationSerializer(serializers.Serializer):
             except Exception as e:
                 print(f"Erreur d'envoi d'email: {e}")
         else:
-            print(f"Nouveau SMS envoyé à {identifier}: Code: {token}")
-            # TODO: Implémenter avec votre API SMS
+            # Envoyer le SMS de vérification
+            try:
+                success, message_id, error = SMSService.send_verification_sms(
+                    phone_number=identifier,
+                    token=token,
+                    user_name=f"{user.nom} {user.prenom}" if user else None
+                )
+                if not success:
+                    print(f"Erreur envoi SMS à {identifier}: {error}")
+            except Exception as e:
+                print(f"Exception lors de l'envoi SMS à {identifier}: {e}")
         
         return {
             "message": "Un nouveau code de vérification a été envoyé",

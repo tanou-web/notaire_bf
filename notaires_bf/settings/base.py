@@ -170,8 +170,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuration du modèle utilisateur personnalisé
 AUTH_USER_MODEL = 'utilisateurs.User'
+# Configuration CORS désactivée pour les tests
 '''
-# Configuration CORS sécurisée
 CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
 if CORS_ALLOWED_ORIGINS_ENV:
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
@@ -225,8 +225,10 @@ CORS_EXPOSE_HEADERS = [
     'Content-Disposition',
     'X-Total-Count',
     'X-Page-Count',
-]'''
+]
+'''
 
+'''
 # Configuration CORS sécurisée
 CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
 if CORS_ALLOWED_ORIGINS_ENV:
@@ -277,6 +279,8 @@ CORS_ALLOW_HEADERS = [
     'x-api-key',
     'cache-control',
 ]
+'''
+
 # Configurations de sécurité pour la production
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
@@ -296,16 +300,35 @@ if not DEBUG:
 
 # Configuration Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+
+# Configuration SendGrid (RECOMMANDÉ pour DigitalOcean)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.sendgrid.net')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'apikey')  # Toujours 'apikey' pour SendGrid
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')  # Votre clé API SendGrid
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@notaires.bf')
 CONTACT_EMAIL = os.getenv('CONTACT_EMAIL', 'contact@notaires.bf')
 
+# Configuration alternative cPanel (si vous utilisez un autre hébergeur)
+# EMAIL_HOST = os.getenv('EMAIL_HOST', 'mail.notaires.bf')
+# EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
+# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+# EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'noreply@notaires.bf')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
 # Configuration SMS
-SMS_PROVIDER = os.getenv('SMS_PROVIDER', 'orange')  # orange, moov, ou autre
+SMS_PROVIDER = os.getenv('SMS_PROVIDER', 'aqilas')  # aqilas, orange, moov, ou autre
+# Configuration API Aqilas (SMS universel Burkina Faso)
+AQILAS_API_URL = os.getenv('AQILAS_API_URL', 'https://www.aqilas.com/api/v1')
+AQILAS_API_KEY = os.getenv('AQILAS_API_KEY', '')
+AQILAS_API_SECRET = os.getenv('AQILAS_API_SECRET', '')
+AQILAS_SENDER_ID = os.getenv('AQILAS_SENDER_ID', 'NOTAIRES')  # Nom de l'expéditeur
+AQILAS_TIMEOUT = int(os.getenv('AQILAS_TIMEOUT', '30'))  # Timeout en secondes
+
+# Anciennes configurations (maintenues pour compatibilité)
 ORANGE_API_TOKEN = os.getenv('ORANGE_API_TOKEN', '')
 MOOV_API_KEY = os.getenv('MOOV_API_KEY', '')
 MOOV_API_SECRET = os.getenv('MOOV_API_SECRET', '')

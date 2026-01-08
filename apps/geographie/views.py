@@ -6,7 +6,7 @@ from apps.communications import models
 from .models import GeographieRegion, GeographieVille
 from .serializers import RegionSerializer, VilleSerializer
 from rest_framework.decorators import action
-
+from .filters import VilleFilter
 class RegionViewSet(viewsets.ModelViewSet):
     queryset = GeographieRegion.objects.all().order_by('ordre', 'nom')
     serializer_class = RegionSerializer
@@ -34,7 +34,7 @@ class VilleViewSet(viewsets.ModelViewSet):
     serializer_class = VilleSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['region','region_code']
+    filterset_class = VilleFilter
     search_fields = ['nom', 'code_postal']
     ordering = ['nom', 'created_at']
 

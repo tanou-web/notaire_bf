@@ -391,19 +391,3 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
         })
 
 
-class LoginRateLimiter:
-
-    @staticmethod
-    def check(key):
-        """Vérifie si la limite est atteinte"""
-        pass
-
-    @staticmethod
-    def increment(key):
-        """Incrémente les tentatives"""
-        pass
-
-    @staticmethod
-    def clear(key):
-        """Réinitialise après succès"""
-        pass

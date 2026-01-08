@@ -199,6 +199,15 @@ class PageVue(models.Model):
     titre = models.CharField(max_length=200, blank=True, verbose_name=_("Titre"))
     vues = models.IntegerField(default=0, verbose_name=_("Nombre de vues"))
     temps_moyen = models.FloatField(default=0.0, verbose_name=_("Temps moyen (secondes)"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Dernière mise à jour")
+    )
     
     class Meta:
         db_table = 'stats_page_vue'
@@ -221,6 +230,16 @@ class Referent(models.Model):
     domaine = models.CharField(max_length=200, verbose_name=_("Domaine"))
     url = models.CharField(max_length=500, verbose_name=_("URL complète"))
     visites = models.IntegerField(default=0, verbose_name=_("Visites"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Dernière mise à jour")
+    )
+  
     
     class Meta:
         db_table = 'stats_referent'
@@ -239,7 +258,16 @@ class PaysVisite(models.Model):
     pays = models.CharField(max_length=100, verbose_name=_("Pays"))
     code_pays = models.CharField(max_length=2, verbose_name=_("Code pays"))
     visites = models.IntegerField(default=0, verbose_name=_("Visites"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
     
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Dernière mise à jour")
+    )
+  
     class Meta:
         db_table = 'stats_pays'
         unique_together = ['date', 'pays']
@@ -256,7 +284,16 @@ class PeriodeActive(models.Model):
     date = models.DateField(verbose_name=_("Date"))
     heure = models.IntegerField(verbose_name=_("Heure (0-23)"))
     visites = models.IntegerField(default=0, verbose_name=_("Visites"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
     
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Dernière mise à jour")
+    )
+  
     class Meta:
         db_table = 'stats_periode_active'
         unique_together = ['date', 'heure']

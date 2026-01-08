@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Burkina Faso](https://img.shields.io/badge/Pays-Burkina%20Faso-yellow.svg)](https://burkinafaso.bf/)
 
-> **Système complet de gestion numérique pour l'Ordre des Notaires du Burkina Faso**
+Système complet de gestion numérique pour l'Ordre des Notaires du Burkina Faso**
 
 ## 📋 Vue d'ensemble
 
@@ -139,10 +139,31 @@ AWS_STORAGE_BUCKET_NAME=your-bucket
 ORANGE_MONEY_API_KEY=your-orange-key
 MOOV_MONEY_API_KEY=your-moov-key
 
-# Email
-EMAIL_HOST=smtp.gmail.com
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+# Email (SendGrid recommandé pour DigitalOcean)
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+EMAIL_HOST_USER=apikey
+EMAIL_HOST_PASSWORD=votre-cle-api-sendgrid
+DEFAULT_FROM_EMAIL=noreply@votre-domaine.com
+CONTACT_EMAIL=contact@votre-domaine.com
+
+# Alternative cPanel (pour autres hébergeurs)
+# EMAIL_HOST=mail.votre-domaine.com
+# EMAIL_PORT=465
+# EMAIL_USE_SSL=True
+# EMAIL_USE_TLS=False
+# EMAIL_HOST_USER=noreply@votre-domaine.com
+# EMAIL_HOST_PASSWORD=votre-mot-de-passe-cpanel
+
+# Ancienne configuration Gmail (alternative)
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_USE_TLS=True
+# EMAIL_USE_SSL=False
+# EMAIL_HOST_USER=your-email@gmail.com
+# EMAIL_HOST_PASSWORD=your-app-password
 ```
 
 ## 📖 API Documentation
@@ -181,25 +202,6 @@ POST /api/paiements/transactions/  # Initier un paiement
 GET  /api/organisation/bureau/     # Membres du bureau
 GET  /api/organisation/missions/   # Missions de l'Ordre
 GET  /api/organisation/stats/      # Statistiques
-```
-
-### Documentation interactive
-- **Swagger UI**: `http://localhost:8000/swagger/`
-- **ReDoc**: `http://localhost:8000/redoc/`
-
-## 🧪 Tests
-
-```bash
-# Exécuter tous les tests
-python manage.py test
-
-# Tests avec couverture
-coverage run manage.py test
-coverage report
-
-# Tests spécifiques
-python manage.py test apps.demandes
-python manage.py test apps.paiements
 ```
 
 ## 🔒 Sécurité
