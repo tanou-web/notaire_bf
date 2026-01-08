@@ -94,8 +94,8 @@ class LoginView(generics.GenericAPIView):
 
         # 2️⃣ Rate limiting (avant authentification)
         try:
-            LoginRateLimiter.check(ip_address)
-            LoginRateLimiter.check(username)
+            LoginRateLimiter.check_login_attempt(ip_address)
+            LoginRateLimiter.check_login_attempt(username)
         except Throttled:
             AuditLogger.log_login_attempt(
                 username=username,
