@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 #ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3000', '0.0.0.0']
 '''if DEBUG:
     ALLOWED_HOSTS = ['*']
 else:
