@@ -728,11 +728,15 @@ class AdminCreateSerializer(serializers.ModelSerializer):
 
         if not first_superuser:
             if request and hasattr(request, 'user') and request.user and not request.user.is_superuser:
-                # Empêcher un non-superutilisateur de créer un admin
-                if data.get('is_superuser', False) or data.get('is_staff', False):
+                # Empêcher un non-superutilisateur de créer un superuser
+                if data.get('is_superuser', False):
                     raise serializers.ValidationError({
-                        "permission": "Vous n'avez pas la permission de créer un administrateur."
+                        "permission": "Seul un superutilisateur peut créer un superutilisateur."
                     })
+                # Permettre aux utilisateurs authentifiés de créer des admins staff
+                elif data.get('is_staff', False):
+                    # Autoriser la création d'admin staff pour les utilisateurs authentifiés
+                    pass
 
         return data
 

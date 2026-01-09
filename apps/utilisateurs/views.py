@@ -302,7 +302,7 @@ class AdminCreateView(generics.CreateAPIView):
         # Si aucun superuser n'existe, autoriser la création
         if not User.objects.filter(is_superuser=True).exists():
             return [permissions.AllowAny()]
-        return [IsSuperUser()]
+        return [permissions.IsAuthenticated()]  # Autorise utilisateurs authentifiés
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -332,10 +332,10 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Filtrer pour ne montrer que les utilisateurs avec des privilèges
         return User.objects.filter(is_staff=True)
-    # apps/utilisateurs/views.pyclass AdminManagementViewSet(viewsets.ModelViewSet):
+
     def get_permissions(self):
         if self.action == 'create':
-            return [permissions.IsAuthenticated()]  # ⚠️ Autorise staff
+            return [permissions.IsAuthenticated()]  # Autorise utilisateurs authentifiés
         return [IsSuperUser()]  # Garde sécurité pour autres actions
     @action(detail=True, methods=['post'])
     def grant_admin(self, request, pk=None):

@@ -6,10 +6,11 @@ from .views import (
     LoginView, LogoutView, RegisterView, SendVerificationView,
     VerifyTokenView, ResendVerificationView,
     PasswordResetView, PasswordChangeView,
-    AdminCreateView
+    AdminCreateView, AdminManagementViewSet
 )
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'admins', AdminManagementViewSet, basename='admin')
 
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),                # Connexion
