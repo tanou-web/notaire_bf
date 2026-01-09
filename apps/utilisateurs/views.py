@@ -308,12 +308,9 @@ class AdminCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
-        # Détecter le premier utilisateur
-        is_first_user = User.objects.count() == 0
-        user = serializer.save(
-            is_staff=True if is_first_user else serializer.validated_data.get('is_staff', True),
-            is_superuser=True if is_first_user else serializer.validated_data.get('is_superuser', False),
-        )
+        # Le serializer gère déjà la logique de création du premier superuser
+        # On laisse le serializer décider des valeurs is_staff et is_superuser
+        user = serializer.save()
 
         refresh = RefreshToken.for_user(user)
         return Response({

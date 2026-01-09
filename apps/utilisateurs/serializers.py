@@ -727,7 +727,7 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         first_superuser = not User.objects.filter(is_superuser=True).exists()
 
         if not first_superuser:
-            if request and not request.user.is_superuser:
+            if request and hasattr(request, 'user') and request.user and not request.user.is_superuser:
                 # Empêcher un non-superutilisateur de créer un admin
                 if data.get('is_superuser', False) or data.get('is_staff', False):
                     raise serializers.ValidationError({
