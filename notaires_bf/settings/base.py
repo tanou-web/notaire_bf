@@ -10,8 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-#ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3001', '0.0.0.0']
+ALLOWED_HOSTS = ['*']
+#ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3001', '0.0.0.0']
 '''if DEBUG:
     ALLOWED_HOSTS = ['*']
 else:
@@ -170,34 +170,48 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuration du modèle utilisateur personnalisé
 AUTH_USER_MODEL = 'utilisateurs.User'
-# Configuration CORS désactivée pour les tests
-
-
-'''
+# Configuration CORS flexible
 CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
+
 if CORS_ALLOWED_ORIGINS_ENV:
+    # Utiliser les origines définies dans les variables d'environnement
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
     CORS_ALLOW_ALL_ORIGINS = False
 else:
-    # Configuration flexible pour développement et production
+    # Configuration par défaut
     if DEBUG:
-        # En développement : autoriser localhost et autres origines communes
+        # En développement : très permissif
         CORS_ALLOWED_ORIGINS = [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:3001',
-            'http://localhost:8080',
-            'http://127.0.0.1:8080',
-            'http://localhost:5173',  # Vite dev server
-            'http://127.0.0.1:5173',
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:3005",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:3002",
+            "http://127.0.0.1:3005",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+            "http://localhost:5173",  # Vite dev server
+            "http://127.0.0.1:5173",
         ]
-        CORS_ALLOW_ALL_ORIGINS = True  # Plus permissif en dev
+        # En développement, on peut aussi autoriser toutes les origines localhost
+        CORS_ALLOW_ALL_ORIGINS = True  # Très permissif en dev
     else:
-        # En production : origines spécifiques seulement
+        # En production : origines spécifiques
         CORS_ALLOWED_ORIGINS = [
-            'https://votredomaine.com',
-            'https://www.votredomaine.com',
+            "https://notaire-bf-1ns8.onrender.com",
+            "https://notaire-admin-bf.onrender.com",
+             
+            # Permettre localhost pour les tests même en prod
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:3005",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:3002",
+            "http://127.0.0.1:3005",
         ]
         CORS_ALLOW_ALL_ORIGINS = False
 
@@ -228,60 +242,7 @@ CORS_EXPOSE_HEADERS = [
     'X-Total-Count',
     'X-Page-Count',
 ]
-'''
 
-'''
-# Configuration CORS sécurisée
-CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
-if CORS_ALLOWED_ORIGINS_ENV:
-    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
-    CORS_ALLOW_ALL_ORIGINS = False
-else:
-    # Configuration flexible pour développement et production
-    if DEBUG:
-        # En développement : autoriser localhost et autres origines communes
-        CORS_ALLOWED_ORIGINS = [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:3001',
-            'http://localhost:8080',
-            'http://127.0.0.1:8080',
-            'http://localhost:5173',  # Vite dev server
-            'http://127.0.0.1:5173',
-        ]
-        CORS_ALLOW_ALL_ORIGINS = True  # Plus permissif en dev
-    else:
-        # En production : origines spécifiques seulement
-        CORS_ALLOWED_ORIGINS = [
-            'https://votredomaine.com',
-            'https://www.votredomaine.com',
-        ]
-        CORS_ALLOW_ALL_ORIGINS = False
-
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'x-api-key',
-    'cache-control',
-]
-'''
 
 # Configurations de sécurité pour la production
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
@@ -385,3 +346,4 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
