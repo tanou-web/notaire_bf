@@ -114,9 +114,7 @@ class LoginView(generics.GenericAPIView):
         )
 
         if not user:
-            LoginRateLimiter.increment(ip_address)
-            LoginRateLimiter.increment(username)
-
+            # L'incrémentation a déjà été faite par check_login_attempt() au début
             AuditLogger.log_login_attempt(
                 username=username,
                 ip_address=ip_address,
@@ -168,8 +166,8 @@ class LoginView(generics.GenericAPIView):
         refresh = RefreshToken.for_user(user)
 
         # Nettoyage rate limit
-        LoginRateLimiter.clear(ip_address)
-        LoginRateLimiter.clear(username)
+        LoginRateLimiter.clear_attempts(ip_address)
+        LoginRateLimiter.clear_attempts(username)
 
         # Audit succès
         AuditLogger.log_login_attempt(
