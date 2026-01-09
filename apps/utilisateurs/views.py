@@ -332,7 +332,11 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Filtrer pour ne montrer que les utilisateurs avec des privilèges
         return User.objects.filter(is_staff=True)
-    
+    # apps/utilisateurs/views.pyclass AdminManagementViewSet(viewsets.ModelViewSet):
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]  # ⚠️ Autorise staff
+        return [IsSuperUser()]  # Garde sécurité pour autres actions
     @action(detail=True, methods=['post'])
     def grant_admin(self, request, pk=None):
       #  Donner les droits d'administrateur à un utilisateur
