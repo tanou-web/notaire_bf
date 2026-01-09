@@ -67,7 +67,9 @@ urlpatterns = [
     path('api/communications/', include('apps.communications.urls')),
     path('api/audit/', include('apps.audit.urls')),
     path('api/system/', include('apps.system.urls')),
-    path('api/core/', include('apps.core.urls')),   
+    path('api/core/', include('apps.core.urls')),  
+    path('api/admin/', include('apps.utilisateurs.urls')),  # ✅ AJOUTEZ CETTE LIGNE
+
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)    
