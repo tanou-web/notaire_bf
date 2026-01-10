@@ -43,14 +43,24 @@ class ActualiteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Adapter le queryset selon les permissions"""
         queryset = super().get_queryset()
-        
+
+        # Support du paramètre 'q' pour la recherche générale
+        search_query = self.request.query_params.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(titre__icontains=search_query) |
+                Q(contenu__icontains=search_query) |
+                Q(resume__icontains=search_query) |
+                Q(slug__icontains=search_query)
+            )
+
         # Pour les utilisateurs non authentifiés ou non staff, ne montrer que les actualités publiées
         if not self.request.user.is_staff and not self.request.user.is_superuser:
             queryset = queryset.filter(
                 publie=True,
                 date_publication__lte=timezone.now()
             )
-        
+
         return queryset
 
     def get_permissions(self):

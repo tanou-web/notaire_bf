@@ -21,4 +21,7 @@ urlpatterns = [
     path('webhook/orange_money/', views.WebhookView.as_view(), name='webhook-orange-money'),
     path('webhook/moov_money/', views.WebhookView.as_view(), name='webhook-moov-money'),
     path('webhook/', PaiementWebhookAPIView.as_view(), name='paiement-webhook'),
+
+    # Export et rapports
+    path('export/rapport/', views.ExportRapportView.as_view(), name='export-rapport'),
 ]

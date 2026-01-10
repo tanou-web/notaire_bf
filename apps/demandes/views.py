@@ -30,20 +30,32 @@ class DemandeViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         if user.is_superuser or user.is_staff:
-            return DemandesDemande.objects.all()
-        if user.is_authenticated:
-            return DemandesDemande.objects.filter(utilisateur=user)
-        
-        # Utilisateur anonyme : peut voir une demande spécifique par email ou référence
-        email = self.request.query_params.get('email')
-        reference = self.request.query_params.get('reference')
-        
-        queryset = DemandesDemande.objects.none()
-        if email:
-            queryset = DemandesDemande.objects.filter(email_reception=email)
-        elif reference:
-            queryset = DemandesDemande.objects.filter(reference=reference)
-        
+            queryset = DemandesDemande.objects.all()
+        elif user.is_authenticated:
+            queryset = DemandesDemande.objects.filter(utilisateur=user)
+        else:
+            # Utilisateur anonyme : peut voir une demande spécifique par email ou référence
+            email = self.request.query_params.get('email')
+            reference = self.request.query_params.get('reference')
+
+            queryset = DemandesDemande.objects.none()
+            if email:
+                queryset = DemandesDemande.objects.filter(email_reception=email)
+            elif reference:
+                queryset = DemandesDemande.objects.filter(reference=reference)
+            else:
+                queryset = DemandesDemande.objects.none()
+
+        # Support du paramètre 'q' pour la recherche générale
+        search_query = self.request.query_params.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(reference__icontains=search_query) |
+                Q(email_reception__icontains=search_query) |
+                Q(prenom_reception__icontains=search_query) |
+                Q(nom_reception__icontains=search_query)
+            )
+
         return queryset
     
     def get_serializer_class(self):

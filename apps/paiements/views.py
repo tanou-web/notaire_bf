@@ -3,6 +3,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction
+from django.http import HttpResponse
+from django.utils import timezone
+from django.db.models import Sum, Count, Q
+from datetime import datetime, timedelta
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+import io
 from .models import PaiementsTransaction
 from .serializers import PaiementSerializer, PaiementCreateSerializer
 from apps.demandes.models import DemandesDemande
@@ -477,3 +487,132 @@ class CallbackView(APIView):
             error_url = f"{frontend_url}/paiement/error?message={str(e)}"
             from django.shortcuts import redirect
             return redirect(error_url)
+
+
+class ExportRapportView(APIView):
+    """
+    Export des rapports financiers en PDF
+    Accessible uniquement aux administrateurs
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        format_type = request.query_params.get('format', 'pdf')  # pdf ou excel
+        periode = request.query_params.get('periode', '30')  # jours
+
+        try:
+            jours = int(periode)
+        except ValueError:
+            jours = 30
+
+        date_debut = timezone.now() - timedelta(days=jours)
+
+        # Récupérer les données financières
+        transactions = PaiementsTransaction.objects.filter(
+            date_creation__gte=date_debut
+        ).select_related('demande')
+
+        # Calculer les statistiques
+        stats_globales = transactions.aggregate(
+            total_montant=Sum('montant'),
+            nombre_transactions=Count('id'),
+            transactions_reussies=Count('id', filter=Q(statut='reussi')),
+            transactions_echouees=Count('id', filter=Q(statut='echec'))
+        )
+
+        if format_type.lower() == 'pdf':
+            return self._generer_pdf(transactions, stats_globales, date_debut, jours)
+        else:
+            return Response({"error": "Format non supporté"}, status=400)
+
+    def _generer_pdf(self, transactions, stats, date_debut, jours):
+        """Génère un rapport PDF des transactions"""
+
+        # Créer le buffer pour le PDF
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Centré
+        )
+
+        # Titre
+        titre = Paragraph(f"Rapport Financier - {jours} jours", title_style)
+        elements.append(titre)
+        elements.append(Spacer(1, 12))
+
+        # Période
+        periode_text = f"Période: {date_debut.date()} - {timezone.now().date()}"
+        elements.append(Paragraph(periode_text, styles['Normal']))
+        elements.append(Spacer(1, 20))
+
+        # Statistiques globales
+        stats_data = [
+            ['Métrique', 'Valeur'],
+            ['Nombre total de transactions', str(stats['nombre_transactions'] or 0)],
+            ['Transactions réussies', str(stats['transactions_reussies'] or 0)],
+            ['Transactions échouées', str(stats['transactions_echouees'] or 0)],
+            ['Montant total (€)', f"{stats['total_montant'] or 0:.2f}"],
+        ]
+
+        stats_table = Table(stats_data)
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(stats_table)
+        elements.append(Spacer(1, 30))
+
+        # Détail des transactions (premières 50)
+        elements.append(Paragraph("Détail des transactions", styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        transactions_data = [['Date', 'Référence', 'Montant', 'Statut', 'Méthode']]
+        for tx in transactions[:50]:  # Limiter à 50 pour la lisibilité
+            transactions_data.append([
+                tx.date_creation.strftime('%d/%m/%Y %H:%M'),
+                tx.reference[:20] + '...' if len(tx.reference) > 20 else tx.reference,
+                f"{tx.montant:.2f} €",
+                tx.statut.title(),
+                tx.methode_paiement or 'N/A'
+            ])
+
+        if len(transactions) > 50:
+            transactions_data.append(['...', '...', '...', '...', '...'])
+
+        tx_table = Table(transactions_data)
+        tx_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ]))
+        elements.append(tx_table)
+
+        # Génération du PDF
+        doc.build(elements)
+
+        # Préparer la réponse
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="rapport_financier_{jours}j_{timezone.now().date()}.pdf"'
+
+        return response

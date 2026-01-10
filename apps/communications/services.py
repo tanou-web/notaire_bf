@@ -1,14 +1,14 @@
 import logging
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.utils.html import strip_tags
+from django.utils import timezone
 import requests
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
-    '''Pour les emails professionnels .'''
+    '''Pour les emails professionnels.'''
     @staticmethod
     def send_verification_email(user_email, token, user_name=None, lang='fr'):
         '''Envoyer un email de vérification'''
@@ -41,6 +41,7 @@ class EmailService:
             logger.info(f"Email de vérification envoyé à {user_email}")
         except Exception as e:
             logger.error(f"Erreur lors de l'envoi de l'email à {user_email}: {e}")
+
     @staticmethod
     def send_welcome_email(user_email, user_name=None, lang='fr'):
         '''Envoyer un email de bienvenue'''
@@ -77,7 +78,6 @@ class EmailService:
         """
         recipients = getattr(settings, 'CONTACT_RECIPIENTS', None) or getattr(settings, 'CONTACT_EMAILS', None)
         if not recipients:
-            # Fall back to ADMINS or DEFAULT_FROM_EMAIL
             admins = getattr(settings, 'ADMINS', None)
             if admins:
                 recipients = [a[1] for a in admins]
@@ -114,7 +114,6 @@ class EmailService:
 
         try:
             result = email.send()
-            # Django's EmailMessage.send returns number of successfully delivered messages (1 if ok)
             if result:
                 logger.info(f"Contact email envoyé de {sender_email} vers {recipients}")
                 return True, 'sent'
@@ -125,43 +124,27 @@ class EmailService:
             logger.exception(f"Erreur lors de l'envoi du contact email: {e}")
             return False, str(e)
 
+
 class SMSService:
     """Service d'envoi de SMS utilisant l'API Aqilas (universel Burkina Faso)"""
 
     @staticmethod
     def send_verification_sms(phone_number, token, user_name=None):
-        """
-        Envoie un SMS de vérification
-        Utilise l'API Aqilas qui fonctionne avec tous les opérateurs BF
-
-        Args:
-            phone_number (str): Numéro de téléphone (format international sans +)
-            token (str): Code de vérification
-            user_name (str, optional): Nom de l'utilisateur
-
-        Returns:
-            tuple: (success: bool, message_id: str or None, error: str or None)
-        """
         from .models import CommunicationsSmslog
 
-        # Nettoyer le numéro de téléphone
         phone_number = SMSService._normalize_phone_number(phone_number)
-
-        # Créer le message
         greeting = f"Bonjour {user_name}, " if user_name else "Bonjour, "
         message = f"{greeting}votre code de vérification est: {token}. Valide 15 minutes. Ordre des Notaires BF"
 
-        # Créer le log SMS en base
         sms_log = CommunicationsSmslog.objects.create(
             destinataire=phone_number,
             message=message,
             fournisseur=settings.SMS_PROVIDER,
-            sender_id=getattr(settings, 'AQILAS_SENDER_ID', 'NOTAIRES'),
+            sender_id=getattr(settings, 'AQILAS_SENDER_ID', 'ONBF'),
             statut='en_attente'
         )
 
         try:
-            # Envoyer via le fournisseur configuré
             if settings.SMS_PROVIDER.lower() == 'aqilas':
                 success, message_id, error = SMSService._send_via_aqilas(phone_number, message)
             elif settings.SMS_PROVIDER.lower() == 'orange':
@@ -169,11 +152,9 @@ class SMSService:
             elif settings.SMS_PROVIDER.lower() == 'moov':
                 success, message_id, error = SMSService._send_via_moov(phone_number, message)
             else:
-                # Fallback: logging pour développement
                 logger.info(f"SMS simulé à {phone_number}: {message}")
                 success, message_id, error = True, f"dev-{sms_log.id}", None
 
-            # Mettre à jour le log
             sms_log.statut = 'envoye' if success else 'echec'
             sms_log.message_id = message_id
             sms_log.erreur = error
@@ -185,39 +166,21 @@ class SMSService:
                 logger.error(f"Échec envoi SMS à {phone_number}: {error}")
 
             return success, message_id, error
-
         except Exception as e:
-            error_msg = f"Erreur inattendue: {str(e)}"
             sms_log.statut = 'echec'
-            sms_log.erreur = error_msg
+            sms_log.erreur = f"Erreur inattendue: {str(e)}"
             sms_log.save()
             logger.error(f"Erreur lors de l'envoi SMS à {phone_number}: {e}")
-            return False, None, error_msg
+            return False, None, str(e)
 
     @staticmethod
     def send_payment_confirmation_sms(phone_number, transaction_reference, amount, user_name=None):
-        """
-        Envoie un SMS de confirmation de paiement réussi
-
-        Args:
-            phone_number (str): Numéro de téléphone du destinataire
-            transaction_reference (str): Référence de la transaction
-            amount (str/Decimal): Montant payé
-            user_name (str, optional): Nom de l'utilisateur
-
-        Returns:
-            tuple: (success: bool, message_id: str or None, error: str or None)
-        """
         from .models import CommunicationsSmslog
 
-        # Nettoyer le numéro de téléphone
         phone_number = SMSService._normalize_phone_number(phone_number)
-
-        # Créer le message
         greeting = f"Cher(e) {user_name}," if user_name else "Cher client,"
         message = f"{greeting} votre paiement de {amount} FCFA (Ref: {transaction_reference}) a été confirmé. Merci pour votre confiance. Ordre des Notaires BF"
 
-        # Créer le log SMS en base
         sms_log = CommunicationsSmslog.objects.create(
             destinataire=phone_number,
             message=message,
@@ -228,7 +191,6 @@ class SMSService:
         )
 
         try:
-            # Envoyer via le fournisseur configuré
             if settings.SMS_PROVIDER.lower() == 'aqilas':
                 success, message_id, error = SMSService._send_via_aqilas(phone_number, message)
             elif settings.SMS_PROVIDER.lower() == 'orange':
@@ -236,11 +198,9 @@ class SMSService:
             elif settings.SMS_PROVIDER.lower() == 'moov':
                 success, message_id, error = SMSService._send_via_moov(phone_number, message)
             else:
-                # Fallback: logging pour développement
                 logger.info(f"SMS de paiement simulé à {phone_number}: {message}")
                 success, message_id, error = True, f"dev-payment-{sms_log.id}", None
 
-            # Mettre à jour le log
             sms_log.statut = 'envoye' if success else 'echec'
             sms_log.message_id = message_id
             sms_log.erreur = error
@@ -252,69 +212,78 @@ class SMSService:
                 logger.error(f"Échec envoi SMS de paiement à {phone_number}: {error}")
 
             return success, message_id, error
-
         except Exception as e:
-            error_msg = f"Erreur inattendue: {str(e)}"
             sms_log.statut = 'echec'
-            sms_log.erreur = error_msg
+            sms_log.erreur = f"Erreur inattendue: {str(e)}"
             sms_log.save()
             logger.error(f"Erreur lors de l'envoi SMS de paiement à {phone_number}: {e}")
-            return False, None, error_msg
+            return False, None, str(e)
 
     @staticmethod
     def _send_via_aqilas(phone_number, message):
         """
-        Envoi via l'API Aqilas (SMS universel Burkina Faso)
-
+        Envoi via l'API Aqilas (Burkina Faso)
+        Requiert :
+            - settings.AQILAS_TOKEN
+            - settings.AQILAS_SENDER = "ONBF"
         Returns:
-            tuple: (success: bool, message_id: str or None, error: str or None)
+            (success: bool, message_id: str | None, error: str | None)
         """
         try:
-            url = f"{settings.AQILAS_API_URL}/sms/send"
+            if not getattr(settings, 'AQILAS_TOKEN', None):
+                return False, None, "AQILAS_TOKEN manquant dans settings"
+
+            url = "https://www.aqilas.com/api/v1/sms"
+
             headers = {
-                'Authorization': f"Bearer {settings.AQILAS_API_KEY}",
-                'Content-Type': 'application/json'
+                "X-AUTH-TOKEN": settings.AQILAS_TOKEN,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
             }
 
             payload = {
-                'to': phone_number,
-                'message': message,
-                'from': getattr(settings, 'AQILAS_SENDER_ID', 'NOTAIRES'),
-                'type': 'transactional'
+                "from": settings.AQILAS_SENDER,   # ONBF
+                "text": message,
+                "to": [f"+{phone_number}"],       # +226XXXXXXXX
             }
 
             response = requests.post(
                 url,
-                headers=headers,
                 json=payload,
-                timeout=settings.AQILAS_TIMEOUT
+                headers=headers,
+                timeout=getattr(settings, "AQILAS_TIMEOUT", 30),
             )
 
-            response_data = response.json()
+            logger.info(f"AQILAS STATUS: {response.status_code}")
+            logger.info(f"AQILAS BODY: {response.text}")
 
-            if response.status_code == 200 and response_data.get('success'):
-                message_id = response_data.get('message_id') or response_data.get('id')
-                cost = response_data.get('cost')
-                return True, message_id, None
-            else:
-                error_msg = response_data.get('message', f'Erreur HTTP {response.status_code}')
-                return False, None, error_msg
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                except ValueError:
+                    # Cas très rare : 200 mais non JSON
+                    return True, f"aqilas-{phone_number}-{int(datetime.now().timestamp())}", None
 
-        except requests.exceptions.Timeout:
-            return False, None, "Timeout de l'API Aqilas"
+                if data.get("success") is True:
+                    # Aqilas retourne bulk_id
+                    return True, data.get("bulk_id"), None
+
+                return False, None, data.get("message", "Erreur Aqilas inconnue")
+
+            if response.status_code == 401:
+                return False, None, "HTTP 401: Token Aqilas invalide"
+
+            if response.status_code == 404:
+                return False, None, "HTTP 404: Endpoint Aqilas introuvable"
+
+            return False, None, f"HTTP {response.status_code}: {response.text}"
+
         except requests.exceptions.RequestException as e:
-            return False, None, f"Erreur de connexion: {str(e)}"
-        except Exception as e:
-            return False, None, f"Erreur API Aqilas: {str(e)}"
+            return False, None, f"Connexion Aqilas impossible: {str(e)}"
+
 
     @staticmethod
     def _send_via_orange(phone_number, message):
-        """
-        Envoi via l'API Orange SMS (maintenu pour compatibilité)
-
-        Returns:
-            tuple: (success: bool, message_id: str or None, error: str or None)
-        """
         try:
             response = requests.post(
                 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B2260000/requests',
@@ -326,9 +295,7 @@ class SMSService:
                     'outboundSMSMessageRequest': {
                         'address': f'tel:+{phone_number}',
                         'senderAddress': 'tel:+2260000',
-                        'outboundSMSTextMessage': {
-                            'message': message
-                        }
+                        'outboundSMSTextMessage': {'message': message}
                     }
                 },
                 timeout=10
@@ -336,20 +303,12 @@ class SMSService:
 
             if response.status_code == 201:
                 return True, f"orange-{int(datetime.now().timestamp())}", None
-            else:
-                return False, None, f"Erreur API Orange: {response.status_code}"
-
+            return False, None, f"Erreur API Orange: {response.status_code}"
         except Exception as e:
             return False, None, f"Erreur Orange: {str(e)}"
 
     @staticmethod
     def _send_via_moov(phone_number, message):
-        """
-        Envoi via l'API Moov Africa (maintenu pour compatibilité)
-
-        Returns:
-            tuple: (success: bool, message_id: str or None, error: str or None)
-        """
         try:
             response = requests.post(
                 'https://api.moov.africa/sms/v1/messages',
@@ -365,30 +324,19 @@ class SMSService:
 
             if response.status_code == 200:
                 return True, f"moov-{int(datetime.now().timestamp())}", None
-            else:
-                return False, None, f"Erreur API Moov: {response.status_code}"
-
+            return False, None, f"Erreur API Moov: {response.status_code}"
         except Exception as e:
             return False, None, f"Erreur Moov: {str(e)}"
 
     @staticmethod
     def _normalize_phone_number(phone_number):
         """
-        Normalise le numéro de téléphone au format international
-
-        Args:
-            phone_number (str): Numéro de téléphone
-
-        Returns:
-            str: Numéro normalisé sans le +
+        Normalise le numéro au format international (226xxxxxxxx)
         """
-        # Supprimer les espaces et caractères spéciaux
         phone_number = ''.join(filter(str.isdigit, phone_number))
-
-        # Ajouter le préfixe 226 si nécessaire
         if phone_number.startswith('0'):
             phone_number = '226' + phone_number[1:]
         elif not phone_number.startswith('226'):
             phone_number = '226' + phone_number
-
         return phone_number
+

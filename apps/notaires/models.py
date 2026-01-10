@@ -13,7 +13,7 @@ class NotairesNotaire(models.Model):
     matricule = models.CharField(unique=True, max_length=50)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
-    photo = models.CharField(max_length=200, blank=True, null=True)
+    photo = models.ImageField(upload_to='notaires/photos/', blank=True, null=True, verbose_name="Photo du notaire")
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
     region = models.ForeignKey('geographie.GeographieRegion', on_delete=models.SET_NULL, blank=True, null=True)

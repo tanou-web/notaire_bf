@@ -65,10 +65,10 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         
         return Response({
-            'message': 'Inscription réussie. Un code de vérification a été envoyé à votre email.',
+            'message': 'Inscription réussie. Un code de vérification a été envoyé par SMS à votre numéro de téléphone.',
             'user_id': user.id,
-            'email': user.email,
-            'next_step': 'verify_email'
+            'telephone': user.telephone,
+            'next_step': 'verify_telephone'
         }, status=status.HTTP_201_CREATED)
 
 class LoginView(generics.GenericAPIView):

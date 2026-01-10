@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 
 from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo
+from apps.demandes.models import DemandesDemande
 
 from .serializers import (
     VentesStickerSerializer, VenteStickerCreateSerializer,
@@ -206,48 +207,47 @@ class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
 
 class StatistiquesNotairesAPIView(APIView):
     """
-    Statistiques par notaire (admin seulement)
+    Statistiques globales des ventes pour le dashboard
+    Retourne les agrégats globaux attendus par le frontend
     """
-    permission_classes = [permissions.IsAdminUser]
-    
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         from django.db.models import Count, Sum
         from datetime import timedelta
-        
+
         date_debut = timezone.now() - timedelta(days=30)
-        
-        # Statistiques ventes stickers par notaire
-        stats_ventes = VenteSticker.objects.filter(
+
+        # Agrégats globaux des ventes de stickers
+        ventes_globales = VenteSticker.objects.filter(
             date_vente__gte=date_debut
-        ).values(
-            'notaire__id',
-            'notaire__nom',
-            'notaire__prenom'
-        ).annotate(
+        ).aggregate(
+            total_stickers=Sum('quantite'),
             total_ventes=Count('id'),
-            total_montant=Sum('montant_total'),
-            stickers_vendus=Sum('quantite')
-        ).order_by('-total_montant')
-        
-        # Statistiques demandes par notaire
-        stats_demandes = Demande.objects.filter(
-            notaire__isnull=False,
+            revenu_total=Sum('montant_total')
+        )
+
+        # Valeurs par défaut si None
+        total_stickers = ventes_globales.get('total_stickers') or 0
+        total_ventes = ventes_globales.get('total_ventes') or 0
+        revenu_total = ventes_globales.get('revenu_total') or 0
+
+        # Statistiques des demandes (optionnel pour le dashboard)
+        demandes_stats = Demande.objects.filter(
             created_at__gte=date_debut
-        ).values(
-            'notaire__id',
-            'notaire__nom',
-            'notaire__prenom'
-        ).annotate(
+        ).aggregate(
             total_demandes=Count('id'),
-            demandes_terminees=Count('id', filter=Q(statut='termine')),
-            total_montant=Sum('montant_total')
-        ).order_by('-total_montant')
-        
+            demandes_terminees=Count('id', filter=Q(statut='termine'))
+        )
+
         return Response({
             'periode': {
                 'debut': date_debut.date(),
                 'fin': timezone.now().date()
             },
-            'ventes_stickers': list(stats_ventes),
-            'demandes_documents': list(stats_demandes)
+            'total_stickers': total_stickers,
+            'total_ventes': total_ventes,
+            'revenu_total': float(revenu_total),
+            'demandes_total': demandes_stats.get('total_demandes') or 0,
+            'demandes_terminees': demandes_stats.get('demandes_terminees') or 0
         })

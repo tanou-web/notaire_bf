@@ -48,16 +48,16 @@ class NotaireSerializer(serializers.ModelSerializer):
     
     def get_nombre_demandes(self, obj):
         try:
-            from apps.ventes.models import Demande
-            return Demande.objects.filter(notaire=obj).count()
+            from apps.demandes.models import DemandesDemande
+            return DemandesDemande.objects.filter(notaire=obj).count()
         except ImportError:
             return 0
-    
+
     def get_demandes_en_cours(self, obj):
         try:
-            from apps.ventes.models import Demande
-            return Demande.objects.filter(
-                notaire=obj, 
+            from apps.demandes.models import DemandesDemande
+            return DemandesDemande.objects.filter(
+                notaire=obj,
                 statut__in=['en_traitement', 'en_attente_notaire']
             ).count()
         except ImportError:

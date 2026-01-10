@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from django.core.cache import cache
+from django.db import transaction
 from datetime import timedelta,datetime
 from .models import VerificationVerificationtoken
 import hashlib
@@ -67,21 +68,37 @@ class TelephoneValidator:
     def validate(telephone):
         # Nettoyer le numéro
         cleaned = re.sub(r'[\s\-\(\)\+]', '', telephone)
-        
+
         if not cleaned.isdigit():
             raise serializers.ValidationError("Le numéro doit contenir uniquement des chiffres.")
-        
-        if len(cleaned) not in [8, 9, 10]:
+
+        if len(cleaned) not in [8, 9, 10, 11]:
             raise serializers.ValidationError("Numéro de téléphone invalide.")
-        
-        if len(cleaned) in [8, 9]:
+
+        # Format court burkinabè (8 chiffres) : 66342505 → +22666342505
+        if len(cleaned) == 8:
             formatted = f"+226{cleaned}"
-        else:
+        # Format avec indicatif local (9 chiffres) : 266342505 → +22666342505
+        elif len(cleaned) == 9:
+            if cleaned.startswith('26'):
+                formatted = f"+{cleaned}"
+            else:
+                formatted = f"+226{cleaned[1:]}"  # Enlever le premier chiffre si pas 26
+        # Format international (10 chiffres) : 22666342505 → +22666342505
+        elif len(cleaned) == 10:
             if cleaned.startswith('226'):
                 formatted = f"+{cleaned}"
             else:
                 raise serializers.ValidationError("Indicatif pays invalide.")
-        
+        # Format international avec + (11 chiffres) : +22666342505 → +22666342505
+        elif len(cleaned) == 11:
+            if cleaned.startswith('226'):
+                formatted = f"+{cleaned[1:]}"  # Enlever le + au début
+            else:
+                raise serializers.ValidationError("Format international invalide.")
+        else:
+            raise serializers.ValidationError("Numéro de téléphone invalide.")
+
         return formatted
 
 # ==================== GÉNÉRATEUR DE TOKENS ====================
@@ -186,6 +203,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'email': {'required': True},
+            'telephone': {'required': True},  # Téléphone obligatoire pour l'envoi de SMS
         }
     
     def validate_accept_terms(self, value):
@@ -212,6 +230,20 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if value.lower() in reserved_usernames:
             raise serializers.ValidationError("Ce nom d'utilisateur est réservé.")        
         return value
+    
+    def validate_telephone(self, value):
+        """Valider et formater le numéro de téléphone"""
+        if not value:
+            raise serializers.ValidationError("Le numéro de téléphone est obligatoire.")
+        
+        # Valider et formater le numéro
+        formatted_phone = TelephoneValidator.validate(value)
+        
+        # Vérifier que le téléphone n'est pas déjà utilisé
+        if User.objects.filter(telephone=formatted_phone).exists():
+            raise serializers.ValidationError("Ce numéro de téléphone est déjà utilisé.")
+        
+        return formatted_phone
     
     def validate(self, data):
         if data['password'] != data['password_confirmation']:
@@ -241,10 +273,63 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validated_data.pop('accept_terms')
         
         password = validated_data.pop('password')
-        user = User.objects.create(**validated_data)
-        user.set_password(password)
-        user.is_active = False  # Désactivé jusqu'à vérification email
-        user.save()
+        telephone = validated_data.get('telephone')
+        
+        # Utiliser une transaction pour s'assurer que si l'envoi SMS échoue,
+        # l'utilisateur et le token ne sont pas créés
+        with transaction.atomic():
+            user = User.objects.create(**validated_data)
+            user.set_password(password)
+            user.is_active = False  # Désactivé jusqu'à vérification du téléphone
+            user.save()
+            
+            # Générer un OTP pour la vérification par SMS
+            otp_token = VerificationTokenGenerator.generate_otp(6)
+            token_hash = VerificationTokenGenerator.hash_token(otp_token)
+            
+            # Supprimer les anciens tokens non utilisés pour ce téléphone
+            VerificationVerificationtoken.objects.filter(
+                user=user,
+                type_token='telephone',
+                expires_at__lt=timezone.now()
+            ).delete()
+            
+            # Créer le token de vérification
+            request = self.context.get('request')
+            verification_token = VerificationVerificationtoken.objects.create(
+                user=user,
+                token=token_hash,
+                type_token='telephone',
+                expires_at=timezone.now() + timedelta(minutes=15),
+                data={
+                    'ip_address': request.META.get('REMOTE_ADDR') if request else None,
+                    'user_agent': request.META.get('HTTP_USER_AGENT') if request else None,
+                    'sent_at': timezone.now().isoformat()
+                }
+            )
+            
+            # Envoyer l'OTP par SMS (obligatoire)
+            # Si l'envoi échoue, la transaction sera annulée et l'utilisateur ne sera pas créé
+            try:
+                success, message_id, error = SMSService.send_verification_sms(
+                    phone_number=telephone,
+                    token=otp_token,
+                    user_name=user.get_full_name()
+                )
+                if not success:
+                    # Si l'envoi SMS échoue, on lève une exception pour annuler la transaction
+                    # car l'envoi SMS est maintenant obligatoire
+                    raise serializers.ValidationError({
+                        "telephone": f"Impossible d'envoyer le SMS de vérification. Erreur: {error or 'Erreur inconnue'}"
+                    })
+            except serializers.ValidationError:
+                # Re-lever les ValidationError pour annuler la transaction
+                raise
+            except Exception as e:
+                # Si une exception survient, on lève une erreur de validation
+                raise serializers.ValidationError({
+                    "telephone": f"Erreur lors de l'envoi du SMS de vérification: {str(e)}"
+                })
         
         return user
 

@@ -3,6 +3,7 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
@@ -24,13 +25,14 @@ class NotaireViewSet(viewsets.ModelViewSet):
     - Création : POST /api/notaires/ (admin seulement)
     - Modification : PUT/PATCH /api/notaires/{id}/ (admin seulement)
     """
-    
+
     queryset = NotairesNotaire.objects.all().order_by('nom', 'prenom')
     permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['region', 'ville', 'actif']
     search_fields = ['nom', 'prenom', 'matricule', 'email']
     ordering_fields = ['nom', 'prenom', 'total_ventes', 'total_cotisations', 'created_at']
+    parser_classes = [MultiPartParser, FormParser]  # Pour l'upload de photos
     
     def get_serializer_class(self):
         if self.action == 'list':

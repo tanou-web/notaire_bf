@@ -38,10 +38,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Par défaut, ne montrer que les documents actifs pour les utilisateurs non authentifiés"""
         queryset = super().get_queryset()
+
+        # Support du paramètre 'q' pour la recherche générale
+        search_query = self.request.query_params.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(nom__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(reference__icontains=search_query)
+            )
+
         user = self.request.user
         if not user.is_authenticated or not user.is_staff:
             queryset = queryset.filter(actif=True)
-        
+
         return queryset
 
     
@@ -112,6 +122,21 @@ class TexteLegalViewSet(viewsets.ModelViewSet):
     search_fields = ['titre', 'reference', 'type_texte']
     ordering_fields = ['titre', 'type_texte', 'ordre', 'date_publication', 'created_at']
     ordering = ['type_texte', 'ordre', 'titre']
+
+    def get_queryset(self):
+        """Support du paramètre 'q' pour la recherche générale"""
+        queryset = super().get_queryset()
+
+        search_query = self.request.query_params.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(titre__icontains=search_query) |
+                Q(reference__icontains=search_query) |
+                Q(type_texte__icontains=search_query) |
+                Q(contenu__icontains=search_query)
+            )
+
+        return queryset
 
     def get_permissions(self):
         """Seuls les admins peuvent créer/modifier/supprimer des textes légaux"""
