@@ -185,10 +185,10 @@ class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
     def notaires_vendeurs(self, request, pk=None):
         """
         Notaires qui ont vendu ce sticker
-        GET /api/stickers/<id>/notaires-vendeurs/
+        GET /api/ventes/stickers/<id>/notaires-vendeurs/
         """
         sticker = self.get_object()
-        
+
         notaires = VenteSticker.objects.filter(
             sticker=sticker
         ).values(
@@ -197,8 +197,51 @@ class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
             'notaire__prenom',
             'notaire__email'
         ).distinct()
-        
+
         return Response(list(notaires))
+
+    @action(detail=False, methods=['get'])
+    def get_notaires_vendeurs(self, request):
+        """
+        Notaires qui ont vendu un sticker spécifique (via query param)
+        GET /api/ventes/stickers/get-notaires-vendeurs/?sticker_id=<id>
+        """
+        sticker_id = request.query_params.get('sticker_id')
+
+        if not sticker_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'sticker_id': 'ID sticker requis'})
+
+        try:
+            from apps.documents.models import DocumentsDocument
+            sticker = DocumentsDocument.objects.get(id=sticker_id)
+        except DocumentsDocument.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Sticker non trouvé')
+
+        notaires = VenteSticker.objects.filter(
+            sticker=sticker
+        ).values(
+            'notaire__id',
+            'notaire__nom',
+            'notaire__prenom',
+            'notaire__email'
+        ).distinct()
+
+        # Reformater les données pour des noms de champs plus propres
+        formatted_notaires = [
+            {
+                'id': notaire['notaire__id'],
+                'nom': notaire['notaire__nom'],
+                'prenom': notaire['notaire__prenom'],
+                'email': notaire['notaire__email']
+            }
+            for notaire in notaires
+        ]
+
+        return Response({
+            'results': formatted_notaires
+        })
 
 
 # ========================================

@@ -21,16 +21,25 @@ class VentesStickerSerializer(serializers.ModelSerializer):
     """
     prix_ttc = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     en_stock = serializers.BooleanField(source='disponible', read_only=True)
-    
+    sticker_nom = serializers.CharField(source='sticker.nom', read_only=True)
+
     class Meta:
         model = VenteSticker
         fields = [
-            'id', 'code', 'nom', 'description', 
-            'prix_ht', 'prix_ttc', 'quantite',
-            'en_stock', 'actif', 'image_principale'
+            'id',
+            'reference',
+            'sticker',
+            'sticker_nom',   # ✅ OK
+            'client_email',
+            'prix_ttc', 
+            'en_stock',
+            'quantite',
+            'prix_unitaire',
+            'montant_total',
+            'statut',
+            'est_payee',
+            'date_vente',
         ]
-        read_only_fields = ['id', 'prix_ttc', 'en_stock']
-
 
 class VenteStickerCreateSerializer(serializers.ModelSerializer):
     """

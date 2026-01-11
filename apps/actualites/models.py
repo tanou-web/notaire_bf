@@ -19,7 +19,12 @@ class ActualitesActualite(models.Model):
     contenu = models.TextField()
     resume = models.CharField(max_length=500, blank=True, null=True)
     categorie = models.CharField(max_length=20, choices=CATEGORIE_CHOICES)
-    image_principale = models.CharField(max_length=200, blank=True, null=True)
+    image_principale = models.ImageField(
+                upload_to='actualites/photos/',
+                blank=True,
+                null=True,
+                verbose_name="Photo du actualites"
+        )
     auteur = models.ForeignKey(
         settings.AUTH_USER_MODEL,  # <- utilisera 'utilisateurs.User'
         on_delete=models.CASCADE,

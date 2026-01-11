@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo, Vente
+from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo
 
 
 # ========================================
@@ -62,27 +62,7 @@ class VenteStickerAdmin(admin.ModelAdmin):
     notaire_display.short_description = 'Notaire'
 
 
-# ========================================
-# 4. VENTE
-# ========================================
-@admin.register(Vente)
-class VenteAdmin(admin.ModelAdmin):
-    list_display = ('reference', 'sticker_display', 'client_email', 'notaire_display', 'quantite', 'prix_unitaire', 'montant_total', 'est_payee', 'statut')
-    list_filter = ('statut', 'est_payee', 'date_vente')
-    search_fields = ('reference', 'client_email', 'sticker__nom')
-    readonly_fields = ('reference', 'token_acces', 'date_vente', 'montant_total')
-
-    def sticker_display(self, obj):
-        return obj.sticker.nom if obj.sticker else "N/A"
-    sticker_display.short_description = 'Sticker'
-
-    def notaire_display(self, obj):
-        if obj.notaire:
-            return f"{obj.notaire.nom} {obj.notaire.prenom}"
-        return "Non attribué"
-    notaire_display.short_description = 'Notaire'
-
-
+#
 # ========================================
 # 5. PAIEMENTS
 # ========================================
@@ -92,6 +72,22 @@ class PaiementAdmin(admin.ModelAdmin):
     list_filter = ('type_paiement', 'statut', 'date_creation')
     search_fields = ('reference', 'demande__reference', 'vente_sticker__reference')
     readonly_fields = ('reference', 'date_creation', 'date_validation')
+
+
+    def statut_colore(self, obj):
+        colors = {
+            'reussi': 'green',
+            'echoue': 'red',
+            'en_attente': 'orange'
+        }
+        return format_html(
+            '<b style="color:{};">{}</b>',
+            colors.get(obj.statut, 'black'),
+            obj.get_statut_display()
+        )
+
+    statut_colore.short_description = 'Statut'
+
 
     def demande_display(self, obj):
         return obj.demande.reference if obj.demande else "-"
@@ -113,8 +109,8 @@ class AvisClientAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
     def sticker_display(self, obj):
-        return obj.sticker.reference if obj.sticker else "-"
-    sticker_display.short_description = 'Sticker'
+     return obj.sticker.sticker.nom if obj.sticker and obj.sticker.sticker else "-"
+
 
     def demande_display(self, obj):
         return obj.demande.reference if obj.demande else "-"

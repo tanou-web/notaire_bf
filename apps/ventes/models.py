@@ -129,6 +129,8 @@ class VenteSticker(models.Model):
         on_delete=models.PROTECT,
         related_name='ventes_stickers'
     )
+    
+    code = models.CharField(max_length=50, unique=True)
 
     client_email = models.EmailField(db_index=True)
     notaire = models.ForeignKey(
@@ -176,73 +178,6 @@ class VenteSticker(models.Model):
         if self.montant_total == 0:
             self.montant_total = self.prix_unitaire * self.quantite
 
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.reference
-
-
-def token_expire_7j():
-    return timezone.now() + timezone.timedelta(days=7)
-
-class Vente(models.Model):
-    STATUT_CHOICES = [
-        ('en_attente', _('En attente')),
-        ('confirmee', _('Confirmée')),
-        ('annulee', _('Annulée')),
-    ]
-
-    reference = models.CharField(max_length=30, unique=True, blank=True)
-    sticker = models.ForeignKey(
-        'documents.DocumentsDocument',  # Assure-toi que ce modèle existe
-        on_delete=models.PROTECT,
-        related_name='ventes'
-    )
-
-    client_email = models.EmailField(db_index=True)
-    notaire = models.ForeignKey(
-        'notaires.NotairesNotaire',  # Assure-toi que ce modèle existe
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='ventes'
-    )
-
-    quantite = models.PositiveIntegerField(default=1)
-    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    montant_total = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal('0.00')
-    )
-
-    statut = models.CharField(
-        max_length=20,
-        choices=STATUT_CHOICES,
-        default='en_attente',
-        db_index=True
-    )
-
-    est_payee = models.BooleanField(default=False)
-
-    token_acces = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        editable=False,
-        db_index=True
-    )
-
-    token_expire = models.DateTimeField(default=token_expire_7j)
-
-    date_vente = models.DateTimeField(default=timezone.now)
-
-    def _generer_reference(self):
-        return f"VEN-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
-
-    def save(self, *args, **kwargs):
-        if not self.reference:
-            self.reference = self._generer_reference()
-        if self.montant_total == 0:
-            self.montant_total = self.prix_unitaire * self.quantite
         super().save(*args, **kwargs)
 
     def __str__(self):
