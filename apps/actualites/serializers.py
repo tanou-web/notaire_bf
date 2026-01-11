@@ -36,7 +36,7 @@ class ActualiteSerializer(serializers.ModelSerializer):
             'vue', 'featured', 'temps_lecture',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['vue', 'slug', 'created_at', 'updated_at']
+        read_only_fields = ['vue', 'slug', 'created_at', 'updated_at', 'auteur']
 
     def get_est_publiee(self, obj):
         return obj.est_publiee
@@ -62,6 +62,19 @@ class ActualiteSerializer(serializers.ModelSerializer):
                 "Une actualité mise en avant doit être publiée"
             )
         return data
+
+    def create(self, validated_data):
+        """Création d'une actualité avec l'auteur courant"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and not validated_data.get('auteur'):
+            validated_data['auteur'] = request.user
+
+        # Par défaut, date de publication maintenant si publié
+        if validated_data.get('publie', False) and not validated_data.get('date_publication'):
+            from django.utils import timezone
+            validated_data['date_publication'] = timezone.now()
+
+        return super().create(validated_data)
 
 
 class ActualiteListSerializer(serializers.ModelSerializer):
