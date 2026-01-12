@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, authenticate
 from django.utils import timezone
+from django.conf import settings
 from django.core.cache import cache
 from .models import VerificationVerificationtoken
 from .serializers import (
@@ -390,6 +391,10 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def verify_admin_otp(self, request, pk=None):
         """Vérifier l'OTP et activer un compte admin nouvellement créé"""
+        from django.conf import settings
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from .serializers import VerifyTokenSerializer
+
         user = self.get_object()
 
         # Logging pour debug
@@ -404,11 +409,9 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
                 'error': 'Ce compte est déjà actif'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Vérifier l'OTP
-        from .serializers import VerifyTokenSerializer
+        # Préparer les données pour le serializer
         token_data = request.data.copy()
         token_data['telephone'] = user.telephone
-
         logger.info(f"Données de vérification: telephone={user.telephone}, token fourni")
 
         try:
@@ -417,7 +420,6 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
                 context={'request': request}
             )
 
-            # Validation avec gestion d'erreur détaillée
             if not serializer.is_valid():
                 logger.error(f"Erreur de validation OTP: {serializer.errors}")
                 return Response({
@@ -428,15 +430,18 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
             result = serializer.save()
             logger.info(f"Résultat de vérification OTP: {result}")
 
+            refresh = None
+            access = None
+
             # Activer le compte si la vérification réussit
             if result.get('verified', False):
                 user.is_active = True
                 user.save()
-
-                # Générer les tokens JWT
                 refresh = RefreshToken.for_user(user)
+                access = str(refresh.access_token)
 
             # Journaliser l'activation
+            from .security.audit_logger import AuditLogger
             AuditLogger.log_security_event(
                 user=request.user,
                 action='activate_admin_account',
@@ -445,26 +450,33 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
                 details={'target_user_id': user.id, 'target_username': user.username}
             )
 
-            return Response({
-                'message': 'Compte administrateur activé avec succès',
+            # Préparer la réponse
+            response_data = {
+                'message': 'Compte administrateur activé avec succès' if result.get('verified', False) else 'OTP invalide',
                 'user_id': user.id,
                 'username': user.username,
                 'is_staff': user.is_staff,
                 'is_superuser': user.is_superuser,
-                'refresh': str(refresh),
-                'access': str(refresh.access_token)
-            })
+            }
+
+            if refresh:
+                response_data.update({
+                    'refresh': str(refresh),
+                    'access': access
+                })
+
+            return Response(
+                response_data,
+                status=status.HTTP_200_OK if result.get('verified', False) else status.HTTP_400_BAD_REQUEST
+            )
 
         except Exception as e:
             logger.error(f"Erreur inattendue lors de la vérification OTP: {str(e)}")
             return Response({
                 'error': 'Erreur interne du serveur',
-                'details': str(e) if settings.DEBUG else 'Contactez l\'administrateur'
+                'details': str(e) if getattr(settings, 'DEBUG', False) else 'Contactez l\'administrateur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({
-            'error': 'Code de vérification invalide'
-        }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['post'])
     def revoke_admin(self, request, pk=None):
