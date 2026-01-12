@@ -329,15 +329,14 @@ class AdminCreateView(generics.CreateAPIView):
             VerificationVerificationtoken.objects.create(
                 user=user,
                 token=token_hash,  # Stocker le hash du token
-                type_token='telephone',
+                type_token='sms',  # Doit correspondre aux choix du serializer
                 expires_at=timezone.now() + timezone.timedelta(minutes=10),
                 data={'purpose': 'admin_creation', 'original_token': token}  # Debug: garder le token original dans data
             )
 
             # Envoyer le SMS
             from apps.communications.services import SMSService
-            message = f"Votre code de vérification pour activation admin : {token}"
-            SMSService.send_sms(user.telephone, message)
+            SMSService.send_verification_sms(user.telephone, token, f"{user.nom} {user.prenom}")
 
         except Exception as e:
             # En cas d'erreur SMS, logger mais ne pas bloquer la création
