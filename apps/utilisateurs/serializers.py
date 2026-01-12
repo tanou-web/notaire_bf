@@ -834,7 +834,7 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         if first_superuser:
             validated_data['is_staff'] = True
             validated_data['is_superuser'] = True
-            validated_data['is_active'] = True
+            # NE PAS forcer is_active=True pour permettre l'OTP
             validated_data['email_verifie'] = True
 
         user = User.objects.create(**validated_data)

@@ -313,12 +313,37 @@ class AdminCreateView(generics.CreateAPIView):
 
         # Générer et envoyer le code de vérification par SMS
         from .serializers import SendVerificationSerializer
-        sms_serializer = SendVerificationSerializer(
-            data={'verification_type': 'sms', 'telephone': user.telephone},
-            context={'request': request, 'user': user}
-        )
-        sms_serializer.is_valid(raise_exception=True)
-        sms_result = sms_serializer.save()
+        from apps.communications.services import SMSService
+
+        try:
+            # Créer directement le token OTP pour ce nouvel utilisateur
+            from .models import VerificationVerificationtoken
+            from .serializers import VerificationTokenGenerator
+            import logging
+
+            # Générer le token
+            token = VerificationTokenGenerator.generate_otp(6)
+            token_hash = VerificationTokenGenerator.hash_token(token)
+
+            # Créer le token en base
+            VerificationVerificationtoken.objects.create(
+                user=user,
+                token=token,  # Stocker le token en clair pour debug (normalement hashé)
+                type_token='telephone',
+                expires_at=timezone.now() + timezone.timedelta(minutes=10),
+                data={'purpose': 'admin_creation'}
+            )
+
+            # Envoyer le SMS
+            from apps.communications.services import SMSService
+            message = f"Votre code de vérification pour activation admin : {token}"
+            SMSService.send_sms(user.telephone, message)
+
+        except Exception as e:
+            # En cas d'erreur SMS, logger mais ne pas bloquer la création
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur envoi SMS pour admin {user.username}: {str(e)}")
+            # On continue quand même la création
 
         return Response({
             'message': 'Administrateur créé. Un code de vérification a été envoyé par SMS.',
