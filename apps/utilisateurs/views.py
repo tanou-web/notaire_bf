@@ -328,10 +328,10 @@ class AdminCreateView(generics.CreateAPIView):
             # Créer le token en base
             VerificationVerificationtoken.objects.create(
                 user=user,
-                token=token,  # Stocker le token en clair pour debug (normalement hashé)
+                token=token_hash,  # Stocker le hash du token
                 type_token='telephone',
                 expires_at=timezone.now() + timezone.timedelta(minutes=10),
-                data={'purpose': 'admin_creation'}
+                data={'purpose': 'admin_creation', 'original_token': token}  # Debug: garder le token original dans data
             )
 
             # Envoyer le SMS

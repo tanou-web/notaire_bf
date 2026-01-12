@@ -19,13 +19,11 @@ class EmailService:
             f"<p>Bonjour {user_name or 'Utilisateur'},</p>"
             f"<p>Veuillez vérifier votre adresse email en cliquant sur le lien suivant :</p>"
             f"<p><a href=\"{verification_link}\">{verification_link}</a></p>"
-            f"<p>Si vous n'avez pas demandé cette vérification, ignorez cet email.</p>"
         )
 
         text_content = (
             f"Bonjour {user_name or 'Utilisateur'},\n\n"
             f"Veuillez vérifier votre adresse email en visitant le lien : {verification_link}\n\n"
-            "Si vous n'avez pas demandé cette vérification, ignorez cet email."
         )
 
         email = EmailMultiAlternatives(
@@ -134,7 +132,7 @@ class SMSService:
 
         phone_number = SMSService._normalize_phone_number(phone_number)
         greeting = f"Bonjour {user_name}, " if user_name else "Bonjour, "
-        message = f"{greeting}votre code de vérification est: {token}. Valide 15 minutes. Ordre des Notaires BF"
+        message = f"{greeting}code {token}. Validité 15 minutes."
 
         sms_log = CommunicationsSmslog.objects.create(
             destinataire=phone_number,
@@ -179,7 +177,7 @@ class SMSService:
 
         phone_number = SMSService._normalize_phone_number(phone_number)
         greeting = f"Cher(e) {user_name}," if user_name else "Cher client,"
-        message = f"{greeting} votre paiement de {amount} FCFA (Ref: {transaction_reference}) a été confirmé. Merci pour votre confiance. Ordre des Notaires BF"
+        message = f"{greeting} paiement de {amount} FCFA (Ref: {transaction_reference}) a été confirmé."
 
         sms_log = CommunicationsSmslog.objects.create(
             destinataire=phone_number,
