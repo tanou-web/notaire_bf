@@ -554,16 +554,27 @@ class VerifyTokenSerializer(serializers.Serializer):
             used=False,
             expires_at__gt=timezone.now()
         )
-        
+
+        # Logging détaillé pour debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Recherche tokens pour user={user.username}, type={verification_type}")
+        logger.info(f"Tokens trouvés: {verification_tokens.count()}")
+
+        for vt in verification_tokens:
+            logger.info(f"Token ID {vt.id}: hash={vt.token[:20]}..., data={vt.data}")
+
         if token_id:
             verification_tokens = verification_tokens.filter(id=token_id)
-        
+
         verification_token = None
         for vt in verification_tokens:
-            if VerificationTokenGenerator.verify_token(vt.token, token):
+            is_valid = VerificationTokenGenerator.verify_token(vt.token, token)
+            logger.info(f"Vérification token {vt.id}: fourni='{token}', valide={is_valid}")
+            if is_valid:
                 verification_token = vt
                 break
-        
+
         if not verification_token:
             # Incrémenter le compteur d'échecs
             if request:

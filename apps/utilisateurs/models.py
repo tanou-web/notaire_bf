@@ -45,6 +45,7 @@ class VerificationVerificationtoken(models.Model):
         ]
     )
     expires_at = models.DateTimeField(verbose_name="Expire le")
+    used = models.BooleanField(default=False, verbose_name="Utilisé")
     data = models.JSONField(default=dict, blank=True, verbose_name="Données supplémentaires")
     create_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Mis à jour le")

@@ -392,8 +392,14 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
         """Vérifier l'OTP et activer un compte admin nouvellement créé"""
         user = self.get_object()
 
+        # Logging pour debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Vérification OTP pour admin {user.username} (ID: {user.id})")
+
         # Vérifier que l'utilisateur n'est pas encore actif
         if user.is_active:
+            logger.warning(f"Tentative de vérification OTP pour compte déjà actif: {user.username}")
             return Response({
                 'error': 'Ce compte est déjà actif'
             }, status=status.HTTP_400_BAD_REQUEST)
@@ -403,20 +409,32 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
         token_data = request.data.copy()
         token_data['telephone'] = user.telephone
 
-        serializer = VerifyTokenSerializer(
-            data=token_data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        result = serializer.save()
+        logger.info(f"Données de vérification: telephone={user.telephone}, token fourni")
 
-        # Activer le compte si la vérification réussit
-        if result.get('verified', False):
-            user.is_active = True
-            user.save()
+        try:
+            serializer = VerifyTokenSerializer(
+                data=token_data,
+                context={'request': request}
+            )
 
-            # Générer les tokens JWT
-            refresh = RefreshToken.for_user(user)
+            # Validation avec gestion d'erreur détaillée
+            if not serializer.is_valid():
+                logger.error(f"Erreur de validation OTP: {serializer.errors}")
+                return Response({
+                    'error': 'Données de vérification invalides',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            result = serializer.save()
+            logger.info(f"Résultat de vérification OTP: {result}")
+
+            # Activer le compte si la vérification réussit
+            if result.get('verified', False):
+                user.is_active = True
+                user.save()
+
+                # Générer les tokens JWT
+                refresh = RefreshToken.for_user(user)
 
             # Journaliser l'activation
             AuditLogger.log_security_event(
@@ -436,6 +454,13 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
                 'refresh': str(refresh),
                 'access': str(refresh.access_token)
             })
+
+        except Exception as e:
+            logger.error(f"Erreur inattendue lors de la vérification OTP: {str(e)}")
+            return Response({
+                'error': 'Erreur interne du serveur',
+                'details': str(e) if settings.DEBUG else 'Contactez l\'administrateur'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
             'error': 'Code de vérification invalide'
