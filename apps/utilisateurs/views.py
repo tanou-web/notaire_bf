@@ -308,19 +308,23 @@ class AdminCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
-        # Le serializer gère déjà la logique de création du premier superuser
-        # On laisse le serializer décider des valeurs is_staff et is_superuser
-        user = serializer.save()
+        # Créer l'utilisateur avec is_active=False (nécessite vérification OTP)
+        user = serializer.save(is_active=False)
 
-        refresh = RefreshToken.for_user(user)
+        # Générer et envoyer le code de vérification par SMS
+        from .serializers import SendVerificationSerializer
+        sms_serializer = SendVerificationSerializer(
+            data={'verification_type': 'sms', 'telephone': user.telephone},
+            context={'request': request, 'user': user}
+        )
+        sms_serializer.is_valid(raise_exception=True)
+        sms_result = sms_serializer.save()
+
         return Response({
-            'message': 'Administrateur créé avec succès',
+            'message': 'Administrateur créé. Un code de vérification a été envoyé par SMS.',
             'user_id': user.id,
-            'email': user.email,
-            'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token)
+            'telephone': user.telephone,
+            'verification_required': True
         }, status=status.HTTP_201_CREATED)
 
 
@@ -358,6 +362,60 @@ class AdminManagementViewSet(viewsets.ModelViewSet):
             'user_id': user.id,
             'is_staff': user.is_staff
         })
+
+    @action(detail=True, methods=['post'])
+    def verify_admin_otp(self, request, pk=None):
+        """Vérifier l'OTP et activer un compte admin nouvellement créé"""
+        user = self.get_object()
+
+        # Vérifier que l'utilisateur n'est pas encore actif
+        if user.is_active:
+            return Response({
+                'error': 'Ce compte est déjà actif'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Vérifier l'OTP
+        from .serializers import VerifyTokenSerializer
+        token_data = request.data.copy()
+        token_data['telephone'] = user.telephone
+
+        serializer = VerifyTokenSerializer(
+            data=token_data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+
+        # Activer le compte si la vérification réussit
+        if result.get('verified', False):
+            user.is_active = True
+            user.save()
+
+            # Générer les tokens JWT
+            refresh = RefreshToken.for_user(user)
+
+            # Journaliser l'activation
+            AuditLogger.log_security_event(
+                user=request.user,
+                action='activate_admin_account',
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT'),
+                details={'target_user_id': user.id, 'target_username': user.username}
+            )
+
+            return Response({
+                'message': 'Compte administrateur activé avec succès',
+                'user_id': user.id,
+                'username': user.username,
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token)
+            })
+
+        return Response({
+            'error': 'Code de vérification invalide'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['post'])
     def revoke_admin(self, request, pk=None):
