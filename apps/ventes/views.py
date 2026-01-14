@@ -63,24 +63,63 @@ class VenteStickerViewSet(viewsets.ViewSet):
         GET /api/ventes-stickers/par-notaire/?notaire_id=<id>
         """
         notaire_id = request.query_params.get('notaire_id')
-        
+
         if not notaire_id:
             raise ValidationError({'notaire_id': 'ID notaire requis'})
-        
-        ventes = VenteSticker.objects.filter(
-            notaire_id=notaire_id
-        ).select_related('sticker').order_by('-date_vente')
-        
-        data = [{
-            'reference': v.reference,
-            'sticker': v.sticker.nom,
-            'client': v.client_nom,
-            'quantite': v.quantite,
-            'montant': float(v.montant_total),
-            'date': v.date_vente
-        } for v in ventes]
-        
-        return Response(data)
+
+        try:
+            # Vérifier que le notaire existe
+            from apps.notaires.models import NotairesNotaire
+            notaire = NotairesNotaire.objects.get(id=notaire_id)
+        except NotairesNotaire.DoesNotExist:
+            raise ValidationError({'notaire_id': 'Notaire non trouvé'})
+        except Exception as e:
+            raise ValidationError({'notaire_id': f'Erreur de vérification notaire: {str(e)}'})
+
+        try:
+            ventes = VenteSticker.objects.filter(
+                notaire_id=notaire_id
+            ).select_related('sticker', 'notaire').order_by('-date_vente')
+
+            data = []
+            for v in ventes:
+                try:
+                    # Vérifier que sticker existe et a un nom
+                    sticker_nom = v.sticker.nom if v.sticker and hasattr(v.sticker, 'nom') else "Sticker inconnu"
+
+                    vente_data = {
+                        'reference': v.reference or "N/A",
+                        'sticker': sticker_nom,
+                        'client': v.client_nom or "Client anonyme",
+                        'quantite': v.quantite or 0,
+                        'montant': float(v.montant_total or 0),
+                        'date': v.date_vente.isoformat() if v.date_vente else None,
+                        'statut': v.get_statut_display() if hasattr(v, 'get_statut_display') else v.statut
+                    }
+                    data.append(vente_data)
+
+                except Exception as e:
+                    # Log l'erreur pour cette vente spécifique mais continue
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Erreur traitement vente {v.id}: {str(e)}")
+                    continue
+
+            return Response({
+                'notaire': {
+                    'id': notaire.id,
+                    'nom': f"{notaire.nom} {notaire.prenom}",
+                    'matricule': notaire.matricule
+                },
+                'ventes': data,
+                'total_ventes': len(data)
+            })
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur récupération ventes notaire {notaire_id}: {str(e)}")
+            raise ValidationError({'detail': f'Erreur interne: {str(e)}'})
 
 
 # ========================================
