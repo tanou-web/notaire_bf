@@ -22,6 +22,11 @@ class NotairesNotaire(models.Model):
     actif = models.BooleanField(default=True)
     total_ventes = models.DecimalField(max_digits=15, decimal_places=2,default=0)
     total_cotisations = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Assurance Responsabilité Civile
+    assurance_rc_a_jour = models.BooleanField(default=False, verbose_name="Assurance RC à jour")
+    assurance_rc_date_echeance = models.DateField(blank=True, null=True, verbose_name="Date d'échéance de l'assurance RC")
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,7 +46,8 @@ class NotairesCotisation(models.Model):
         max_length=20,
         choices=[
             ('payee','Payée'),
-            ('impayee', 'Impayée')
+            ('impayee', 'Impayée'),
+            ('exceptionnelle', 'Exceptionnelle')
         ],
         default='impayee'        
     )
@@ -55,3 +61,31 @@ class NotairesCotisation(models.Model):
         unique_together = (('notaire', 'annee'),)
     def __str__(self):
         return f'{self.notaire} - {self.annee}'
+
+
+class NotairesStagiaire(models.Model):
+    STATUT_CHOICES = [
+        ('en_cours', 'En cours'),
+        ('termine', 'Terminé'),
+        ('suspendu', 'Suspendu'),
+    ]
+
+    notaire_maitre = models.ForeignKey(NotairesNotaire, on_delete=models.CASCADE, related_name='stagiaires')
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField()
+    telephone = models.CharField(max_length=20)
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_cours')
+    date_debut = models.DateField(default=timezone.now)
+    date_fin_prevue = models.DateField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'notaires_stagiaire'
+        verbose_name = 'Stagiaire Notaire'
+        verbose_name_plural = 'Stagiaires Notaires'
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom} (Maître: {self.notaire_maitre})"

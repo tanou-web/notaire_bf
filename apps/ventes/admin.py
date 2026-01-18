@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo
+from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo, ReferenceSticker, VenteStickerNotaire
 
 
 # ========================================
@@ -72,6 +72,10 @@ class PaiementAdmin(admin.ModelAdmin):
     list_filter = ('type_paiement', 'statut', 'date_creation')
     search_fields = ('reference', 'demande__reference', 'vente_sticker__reference')
     readonly_fields = ('reference', 'date_creation', 'date_validation')
+    
+    def vente_sticker_display(self, obj):
+        return obj.vente_sticker.reference if obj.vente_sticker else "-"
+    vente_sticker_display.short_description = 'Vente Sticker'
 
 
     def statut_colore(self, obj):
@@ -93,9 +97,29 @@ class PaiementAdmin(admin.ModelAdmin):
         return obj.demande.reference if obj.demande else "-"
     demande_display.short_description = 'Demande'
 
-    def vente_sticker_display(self, obj):
-        return obj.vente_sticker.reference if obj.vente_sticker else "-"
-    vente_sticker_display.short_description = 'Vente Sticker'
+
+# ========================================
+# 7. STICKERS NOTAIRES
+# ========================================
+@admin.register(ReferenceSticker)
+class ReferenceStickerAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'prix_unitaire', 'total_stock', 'created_at')
+    search_fields = ('nom',)
+
+@admin.register(VenteStickerNotaire)
+class VenteStickerNotaireAdmin(admin.ModelAdmin):
+    list_display = (
+        'reference', 'notaire_display', 'type_sticker', 'quantite', 
+        'plage_debut', 'plage_fin', 'montant_total', 'montant_paye', 
+        'reste_a_payer', 'date_vente'
+    )
+    list_filter = ('date_vente', 'type_sticker')
+    search_fields = ('reference', 'notaire__nom', 'plage_debut', 'plage_fin')
+    readonly_fields = ('reference', 'montant_total', 'reste_a_payer', 'created_at', 'updated_at')
+    
+    def notaire_display(self, obj):
+        return f"{obj.notaire.nom} {obj.notaire.prenom}"
+    notaire_display.short_description = 'Notaire'
 
 
 # ========================================
@@ -115,4 +139,3 @@ class AvisClientAdmin(admin.ModelAdmin):
     def demande_display(self, obj):
         return obj.demande.reference if obj.demande else "-"
     demande_display.short_description = 'Demande'
-

@@ -8,13 +8,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
+from django.shortcuts import get_object_or_404
 
-
-from .models import NotairesNotaire, NotairesCotisation
+from .models import NotairesNotaire, NotairesCotisation, NotairesStagiaire
 from .serializers import (
     NotaireSerializer, NotaireMinimalSerializer,
     NotaireCreateSerializer, NotaireUpdateSerializer,
-    NotaireStatsSerializer, CotisationSerializer
+    NotaireStatsSerializer, CotisationSerializer,
+    StagiaireSerializer
 )
 
 class NotaireViewSet(viewsets.ModelViewSet):
@@ -341,3 +342,17 @@ class RechercheNotairesAPIView(APIView):
                 'villes': list(villes),
             }
         })
+
+class StagiaireViewSet(viewsets.ModelViewSet):
+    """API pour la gestion des stagiaires notaires"""
+    queryset = NotairesStagiaire.objects.all()
+    serializer_class = StagiaireSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['notaire_maitre', 'statut']
+    search_fields = ['nom', 'prenom', 'email']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()

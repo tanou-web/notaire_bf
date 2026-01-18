@@ -1,6 +1,6 @@
 # apps/notaires/serializers.py - COPIER-COLLER CE CODE
 from rest_framework import serializers
-from .models import NotairesNotaire, NotairesCotisation
+from .models import NotairesNotaire, NotairesCotisation, NotairesStagiaire
 
 class NotaireMinimalSerializer(serializers.ModelSerializer):
     """Serializer minimal pour les listes (performant)"""
@@ -13,7 +13,8 @@ class NotaireMinimalSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'matricule', 'nom', 'prenom', 'nom_complet', 'photo',
             'telephone', 'email', 'region_nom', 'ville_nom',
-            'adresse', 'actif', 'total_ventes'
+            'adresse', 'actif', 'total_ventes',
+            'assurance_rc_a_jour', 'assurance_rc_date_echeance'
         ]
     
     def get_nom_complet(self, obj):
@@ -36,7 +37,8 @@ class NotaireSerializer(serializers.ModelSerializer):
             'ville', 'ville_nom',
             'actif', 'created_at', 'updated_at',
             'total_ventes', 'total_cotisations',
-            'nombre_demandes', 'demandes_en_cours'
+            'nombre_demandes', 'demandes_en_cours',
+            'assurance_rc_a_jour', 'assurance_rc_date_echeance'
         ]
         read_only_fields = [
             'created_at', 'updated_at',
@@ -82,7 +84,7 @@ class NotaireUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'nom', 'prenom', 'photo', 'telephone',
             'email', 'adresse', 'region', 'ville',
-            'actif'
+            'actif', 'assurance_rc_a_jour', 'assurance_rc_date_echeance'
         ]
 
 class NotaireStatsSerializer(serializers.Serializer):
@@ -107,6 +109,19 @@ class CotisationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'notaire', 'notaire_nom', 'notaire_matricule',
             'annee', 'montant', 'statut', 'date_paiement',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+class StagiaireSerializer(serializers.ModelSerializer):
+    notaire_maitre_nom = serializers.CharField(source='notaire_maitre.nom_complet', read_only=True)
+
+    class Meta:
+        model = NotairesStagiaire
+        fields = [
+            'id', 'notaire_maitre', 'notaire_maitre_nom',
+            'nom', 'prenom', 'email', 'telephone',
+            'statut', 'date_debut', 'date_fin_prevue',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']

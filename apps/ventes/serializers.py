@@ -7,7 +7,7 @@ from datetime import timedelta
 import re
 import uuid
 
-from .models import VenteSticker, Demande, Paiement, AvisClient, CodePromo
+from .models import VenteSticker, Demande, Paiement, AvisClient, CodePromo, ReferenceSticker, VenteStickerNotaire
 
 
 
@@ -534,3 +534,35 @@ class StatistiquesPeriodSerializer(serializers.Serializer):
             })
         
         return data
+
+
+# ========================================
+# 7. SERIALIZERS STICKERS NOTAIRES
+# ========================================
+
+class ReferenceStickerSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour les types de stickers disponibles
+    """
+    class Meta:
+        model = ReferenceSticker
+        fields = ['id', 'nom', 'description', 'image', 'prix_unitaire', 'total_stock', 'created_at']
+        read_only_fields = ['created_at']
+
+class VenteStickerNotaireSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour les ventes de stickers aux notaires
+    """
+    notaire_nom = serializers.CharField(source='notaire.nom_complet', read_only=True)
+    type_sticker_nom = serializers.CharField(source='type_sticker.nom', read_only=True)
+    
+    class Meta:
+        model = VenteStickerNotaire
+        fields = [
+            'id', 'reference', 'notaire', 'notaire_nom',
+            'type_sticker', 'type_sticker_nom',
+            'quantite', 'plage_debut', 'plage_fin',
+            'montant_total', 'montant_paye', 'reste_a_payer',
+            'date_vente', 'created_at'
+        ]
+        read_only_fields = ['reference', 'montant_total', 'reste_a_payer', 'created_at']

@@ -6,7 +6,8 @@ from .views import (
     NotaireViewSet,
     NotaireStatsAPIView,
     CotisationViewSet,
-    RechercheNotairesAPIView
+    RechercheNotairesAPIView,
+    StagiaireViewSet
 )
 
 router = DefaultRouter()
@@ -14,6 +15,7 @@ router = DefaultRouter()
 # Ressources principales
 router.register(r'notaires', NotaireViewSet, basename='notaire')
 router.register(r'cotisations', CotisationViewSet, basename='cotisation')
+router.register(r'stagiaires', StagiaireViewSet, basename='stagiaire')
 
 urlpatterns = [
     # Routes REST standards (ViewSets)

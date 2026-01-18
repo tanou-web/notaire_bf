@@ -47,7 +47,101 @@ class CodePromo(models.Model):
 
 
 # =====================================================
-# 2. DEMANDE (deuxième car Paiement y fait référence)
+# 2. REFERENCE STICKER (Catalogue pour Notaires)
+# =====================================================
+
+class ReferenceSticker(models.Model):
+    nom = models.CharField(max_length=200, verbose_name="Nom du sticker")
+    description = models.TextField(verbose_name="Description", blank=True)
+    image = models.ImageField(upload_to='stickers/references/', null=True, blank=True, verbose_name="Image du sticker")
+    prix_unitaire = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        verbose_name="Prix Unitaire (FCFA)"
+    )
+    total_stock = models.PositiveIntegerField(default=0, verbose_name="Stock Total")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Référence Sticker"
+        verbose_name_plural = "Références Stickers"
+
+    def __str__(self):
+        return self.nom
+
+
+# =====================================================
+# 3. VENTE STICKER NOTAIRE (Suivi avec Plages & Paiements)
+# =====================================================
+
+class VenteStickerNotaire(models.Model):
+    reference = models.CharField(max_length=30, unique=True, blank=True)
+    notaire = models.ForeignKey(
+        'notaires.NotairesNotaire',
+        on_delete=models.PROTECT,
+        related_name='ventes_notaires'
+    )
+    type_sticker = models.ForeignKey(
+        ReferenceSticker,
+        on_delete=models.PROTECT,
+        related_name='ventes'
+    )
+    
+    quantite = models.PositiveIntegerField(verbose_name="Quantité")
+    plage_debut = models.CharField(max_length=100, verbose_name="Plage de début (Ex: A1010101)")
+    plage_fin = models.CharField(max_length=100, verbose_name="Plage de fin (Ex: A2000002)")
+    
+    montant_total = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        verbose_name="Montant Total"
+    )
+    montant_paye = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        verbose_name="Montant Payé"
+    )
+    reste_a_payer = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        verbose_name="Reste à Payer"
+    )
+    
+    date_vente = models.DateTimeField(default=timezone.now, verbose_name="Date de vente")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def _generer_reference(self):
+        return f"VNT-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self._generer_reference()
+        
+        # Calcul automatique des montants
+        if self.type_sticker:
+            self.montant_total = self.type_sticker.prix_unitaire * self.quantite
+        
+        self.reste_a_payer = self.montant_total - self.montant_paye
+        
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Vente Sticker Notaire"
+        verbose_name_plural = "Ventes Stickers Notaires"
+        ordering = ['-date_vente']
+
+    def __str__(self):
+        return f"{self.reference} - {self.notaire.nom_complet}"
+
+
+# =====================================================
+# 4. DEMANDE (quatrième car Paiement y fait référence)
 # =====================================================
 
 class DemandeVente(models.Model):

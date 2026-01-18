@@ -68,6 +68,7 @@ urlpatterns = [
     path('api/audit/', include('apps.audit.urls')),
     path('api/system/', include('apps.system.urls')),
     path('api/core/', include('apps.core.urls')),  
+    path('api/evenements/', include('apps.evenements.urls')),
     path('api/admin/', include('apps.utilisateurs.urls')),  # ✅ AJOUTEZ CETTE LIGNE
 
 ]

@@ -1,0 +1,293 @@
+﻿python : Traceback 
+(most recent call 
+last):
+At line:1 char:1
++ python manage.py 
+check 2>&1 | 
+Out-File -FilePath 
+traceback.txt -Encod 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Traceba   
+ ck (most recent     
+call last)::Stri    
+ng) [], RemoteEx    
+ception
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  File "C:\Users\DELL
+\Desktop\notaire_bf 
+(2)\manage.py", line 
+22, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\DELL
+\Desktop\notaire_bf 
+(2)\manage.py", line 
+18, in main
+    execute_from_comm
+and_line(sys.argv)
+    ~~~~~~~~~~~~~~~~~
+~~~~~~~~^^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\__init__.py",
+ line 442, in execute
+_from_command_line
+    utility.execute()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\__init__.py",
+ line 436, in execute
+    self.fetch_comman
+d(subcommand).run_fro
+m_argv(self.argv)
+    ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~^^^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\base.py", 
+line 416, in 
+run_from_argv
+    
+self.execute(*args, 
+**cmd_options)
+    ~~~~~~~~~~~~^^^^^
+^^^^^^^^^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\base.py", 
+line 460, in execute
+    output = 
+self.handle(*args, 
+**options)
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\commands\chec
+k.py", line 81, in 
+handle
+    self.check(
+    ~~~~~~~~~~^
+        app_configs=a
+pp_configs,
+        ^^^^^^^^^^^^^
+^^^^^^^^^^^
+    ...<4 lines>...
+        databases=opt
+ions["databases"],
+        ^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\man
+agement\base.py", 
+line 492, in check
+    all_issues = 
+checks.run_checks(
+        app_configs=a
+pp_configs,
+    ...<2 lines>...
+        
+databases=databases,
+    )
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\che
+cks\registry.py", 
+line 89, in 
+run_checks
+    new_errors = chec
+k(app_configs=app_con
+figs, 
+databases=databases)
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\core\che
+cks\urls.py", line 
+136, in check_custom_
+error_handlers
+    handler = resolve
+r.resolve_error_handl
+er(status_code)
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\urls\res
+olvers.py", line 
+732, in 
+resolve_error_handler
+    callback = getatt
+r(self.urlconf_module
+, "handler%s" % 
+view_type, None)
+                     
+  ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\utils\fu
+nctional.py", line 
+47, in __get__
+    res = instance.__
+dict__[self.name] = 
+self.func(instance)
+                     
+                    
+~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\urls\res
+olvers.py", line 
+711, in 
+urlconf_module
+    return import_mod
+ule(self.urlconf_name
+)
+  File "C:\Python314\
+Lib\importlib\__init_
+_.py", line 88, in 
+import_module
+    return _bootstrap
+._gcd_import(name[lev
+el:], package, level)
+           ~~~~~~~~~~
+~~~~~~~~~~~~^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1398, in 
+_gcd_import
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1371, in 
+_find_and_load
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1342, in _find_a
+nd_load_unlocked
+  File "<frozen impor
+tlib._bootstrap>", 
+line 938, in 
+_load_unlocked
+  File "<frozen impor
+tlib._bootstrap_exter
+nal>", line 762, in 
+exec_module
+  File "<frozen impor
+tlib._bootstrap>", 
+line 491, in _call_wi
+th_frames_removed
+  File "C:\Users\DELL
+\Desktop\notaire_bf (
+2)\notaires_bf\urls.p
+y", line 65, in 
+<module>
+    
+path('api/ventes/', i
+nclude('apps.ventes.u
+rls')),
+                     
+   ~~~~~~~^^^^^^^^^^^
+^^^^^^^^^
+  File "C:\Users\DELL
+\AppData\Roaming\Pyth
+on\Python314\site-pac
+kages\django\urls\con
+f.py", line 39, in 
+include
+    urlconf_module = 
+import_module(urlconf
+_module)
+  File "C:\Python314\
+Lib\importlib\__init_
+_.py", line 88, in 
+import_module
+    return _bootstrap
+._gcd_import(name[lev
+el:], package, level)
+           ~~~~~~~~~~
+~~~~~~~~~~~~^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1398, in 
+_gcd_import
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1371, in 
+_find_and_load
+  File "<frozen impor
+tlib._bootstrap>", 
+line 1342, in _find_a
+nd_load_unlocked
+  File "<frozen impor
+tlib._bootstrap>", 
+line 938, in 
+_load_unlocked
+  File "<frozen impor
+tlib._bootstrap_exter
+nal>", line 762, in 
+exec_module
+  File "<frozen impor
+tlib._bootstrap>", 
+line 491, in _call_wi
+th_frames_removed
+  File "C:\Users\DELL
+\Desktop\notaire_bf (
+2)\apps\ventes\urls.p
+y", line 4, in 
+<module>
+    from . import 
+views
+  File "C:\Users\DELL
+\Desktop\notaire_bf (
+2)\apps\ventes\views.
+py", line 230, in 
+<module>
+    class VenteSticke
+rNotaireViewSet(views
+ets.ModelViewSet):
+    ...<26 lines>...
+            return Re
+sponse(serializer.dat
+a)
+  File "C:\Users\DELL
+\Desktop\notaire_bf (
+2)\apps\ventes\views.
+py", line 237, in Ven
+teStickerNotaireViewS
+et
+    filter_backends 
+= [DjangoFilterBacken
+d, 
+filters.SearchFilter]
+                     
+                     
+  ^^^^^^^
+NameError: name 
+'filters' is not 
+defined. Did you 
+mean: 'filter'?

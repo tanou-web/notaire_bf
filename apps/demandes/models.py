@@ -31,6 +31,7 @@ class DemandesDemande(models.Model):
     document = models.ForeignKey('documents.DocumentsDocument', on_delete=models.CASCADE)
     statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='brouillon')
     donnees_formulaire = models.JSONField(default=dict)
+    lien_affiliation = models.URLField(max_length=500, blank=True, null=True, verbose_name="Lien d'affiliation")
     email_reception = models.EmailField(max_length=254, blank=True, null=True)
     montant_total = models.DecimalField(max_digits=10, decimal_places=2)
     frais_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -56,6 +57,8 @@ class DemandesPieceJointe(models.Model):
     TYPE_PIECE_CHOICES = [
         ('cnib', 'CNIB (Carte Nationale d\'Identité Burkinabé)'),
         ('passeport', 'Passeport'),
+        ('acte_deces', 'Acte de décès'),
+        ('certificat_heredite', 'Certificat d\'hérédité'),
         ('document_identite', 'Autre document d\'identité'),
         ('document_legal', 'Document légal'),
         ('autre', 'Autre document'),

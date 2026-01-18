@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'apps.audit',
     'apps.system',
     'apps.core',
+    'apps.evenements',
 ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

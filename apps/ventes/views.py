@@ -1,5 +1,5 @@
 # apps/ventes/views.py
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
@@ -10,14 +10,16 @@ from datetime import timedelta
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from rest_framework.views import APIView
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo
+from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo, ReferenceSticker, VenteStickerNotaire
 from apps.demandes.models import DemandesDemande
 
 from .serializers import (
     VentesStickerSerializer, VenteStickerCreateSerializer,
     DemandeCreateSerializer, DemandeSerializer,
-    AvisClientCreateSerializer
+    AvisClientCreateSerializer, ReferenceStickerSerializer, 
+    VenteStickerNotaireSerializer
 )
 
 # ========================================
@@ -212,6 +214,48 @@ class PaiementViewSet(viewsets.ViewSet):
 # 4. API CATALOGUE STICKERS
 # ========================================
 
+class ReferenceStickerViewSet(viewsets.ModelViewSet):
+    """
+    API pour gérer les types de stickers disponibles (Admin)
+    """
+    queryset = ReferenceSticker.objects.all()
+    serializer_class = ReferenceStickerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+class VenteStickerNotaireViewSet(viewsets.ModelViewSet):
+    """
+    API pour gérer les ventes de stickers aux notaires
+    """
+    queryset = VenteStickerNotaire.objects.all().select_related('notaire', 'type_sticker')
+    serializer_class = VenteStickerNotaireSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['notaire', 'type_sticker']
+    search_fields = ['reference', 'plage_debut', 'plage_fin', 'notaire__nom']
+
+    def get_permissions(self):
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+    @action(detail=False, methods=['get'])
+    def par_notaire(self, request):
+        """
+        Liste des ventes pour un notaire spécifique
+        """
+        notaire_id = request.query_params.get('notaire_id')
+        if not notaire_id:
+            return Response({"error": "notaire_id est requis"}, status=400)
+        
+        ventes = self.get_queryset().filter(notaire_id=notaire_id)
+        serializer = self.get_serializer(ventes, many=True)
+        return Response(serializer.data)
+
 class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API catalogue des stickers (lecture seule)
@@ -315,7 +359,7 @@ class StatistiquesNotairesAPIView(APIView):
         revenu_total = ventes_globales.get('revenu_total') or 0
 
         # Statistiques des demandes (optionnel pour le dashboard)
-        demandes_stats = Demande.objects.filter(
+        demandes_stats = DemandeVente.objects.filter(
             created_at__gte=date_debut
         ).aggregate(
             total_demandes=Count('id'),
