@@ -339,41 +339,73 @@ class StatistiquesNotairesAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        from django.db.models import Count, Sum
+        from django.db.models import Count, Sum, Q
         from datetime import timedelta
 
         date_debut = timezone.now() - timedelta(days=30)
+        nom_sticker = request.query_params.get('nom_sticker')
 
-        # Agrégats globaux des ventes de stickers
-        ventes_globales = VenteSticker.objects.filter(
-            date_vente__gte=date_debut
-        ).aggregate(
+        # Filtres de base
+        filtres_ventes = Q(date_vente__gte=date_debut)
+        filtres_ventes_notaires = Q(date_vente__gte=date_debut)
+
+        if nom_sticker:
+            filtres_ventes &= Q(sticker__nom__icontains=nom_sticker)
+            filtres_ventes_notaires &= Q(type_sticker__nom__icontains=nom_sticker)
+
+        # Agrégats des ventes de stickers aux clients (via notaires)
+        ventes_clients = VenteSticker.objects.filter(filtres_ventes).aggregate(
             total_stickers=Sum('quantite'),
             total_ventes=Count('id'),
             revenu_total=Sum('montant_total')
         )
 
-        # Valeurs par défaut si None
-        total_stickers = ventes_globales.get('total_stickers') or 0
-        total_ventes = ventes_globales.get('total_ventes') or 0
-        revenu_total = ventes_globales.get('revenu_total') or 0
-
-        # Statistiques des demandes (optionnel pour le dashboard)
-        demandes_stats = DemandeVente.objects.filter(
-            created_at__gte=date_debut
-        ).aggregate(
-            total_demandes=Count('id'),
-            demandes_terminees=Count('id', filter=Q(statut='termine'))
+        # Agrégats des ventes de stickers aux notaires (stock)
+        ventes_notaires_stock = VenteStickerNotaire.objects.filter(filtres_ventes_notaires).aggregate(
+            total_stickers=Sum('quantite'),
+            total_ventes=Count('id'),
+            revenu_total=Sum('montant_total')
         )
+
+        # Valeurs par défaut
+        v_client_qty = ventes_clients.get('total_stickers') or 0
+        v_client_count = ventes_clients.get('total_ventes') or 0
+        v_client_revenue = ventes_clients.get('revenu_total') or 0
+
+        v_notaire_qty = ventes_notaires_stock.get('total_stickers') or 0
+        v_notaire_count = ventes_notaires_stock.get('total_ventes') or 0
+        v_notaire_revenue = ventes_notaires_stock.get('revenu_total') or 0
+
+        # Statistiques des demandes (uniquement si pas de filtre par nom de sticker ou si pertinent)
+        demandes_stats = {}
+        if not nom_sticker:
+            demandes_stats = DemandeVente.objects.filter(
+                created_at__gte=date_debut
+            ).aggregate(
+                total_demandes=Count('id'),
+                demandes_terminees=Count('id', filter=Q(statut='terminee'))
+            )
 
         return Response({
             'periode': {
                 'debut': date_debut.date(),
                 'fin': timezone.now().date()
             },
-            'total_stickers': total_stickers,
-            'total_ventes': total_ventes,
-            'revenu_total': float(revenu_total),
+            'filtre_nom': nom_sticker,
+            'ventes_clients': {
+                'quantite': v_client_qty,
+                'nombre_transactions': v_client_count,
+                'revenu': float(v_client_revenue)
+            },
+            'ventes_notaires': {
+                'quantite': v_notaire_qty,
+                'nombre_transactions': v_notaire_count,
+                'revenu': float(v_notaire_revenue)
+            },
+            'total_global': {
+                'quantite': v_client_qty + v_notaire_qty,
+                'revenu_total': float(v_client_revenue + v_notaire_revenue)
+            },
             'demandes_total': demandes_stats.get('total_demandes') or 0,
             'demandes_terminees': demandes_stats.get('demandes_terminees') or 0
         })
