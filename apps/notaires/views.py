@@ -347,7 +347,7 @@ class StagiaireViewSet(viewsets.ModelViewSet):
     """API pour la gestion des stagiaires notaires"""
     queryset = NotairesStagiaire.objects.all()
     serializer_class = StagiaireSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['notaire_maitre', 'statut']
     search_fields = ['nom', 'prenom', 'email']
@@ -355,4 +355,13 @@ class StagiaireViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAdminUser()]
-        return super().get_permissions()
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        queryset = NotairesStagiaire.objects.select_related(
+            'notaire_maitre'
+        ).order_by('nom', 'prenom')
+        notaire_id = self.request.query_params.get('notaire')
+        if notaire_id:
+            queryset = queryset.filter(notaire_maitre_id=notaire_id)
+        return queryset

@@ -114,14 +114,37 @@ class CotisationSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 class StagiaireSerializer(serializers.ModelSerializer):
-    notaire_maitre_nom = serializers.CharField(source='notaire_maitre.nom_complet', read_only=True)
+    notaire_nom = serializers.CharField(
+        source='notaire_maitre.nom',
+        read_only=True
+    )
+    notaire_prenom = serializers.CharField(
+        source='notaire_maitre.prenom',
+        read_only=True
+    )
+    notaire_nom_complet = serializers.SerializerMethodField()
 
     class Meta:
         model = NotairesStagiaire
         fields = [
-            'id', 'notaire_maitre', 'notaire_maitre_nom',
-            'nom', 'prenom', 'email', 'telephone',
-            'statut', 'date_debut', 'date_fin_prevue',
-            'created_at', 'updated_at'
+            'id',
+            'notaire_maitre',
+            'notaire_nom',
+            'notaire_prenom',
+            'notaire_nom_complet',
+            'nom',
+            'prenom',
+            'email',
+            'telephone',
+            'statut',
+            'date_debut',
+            'date_fin_prevue',
+            'created_at',
+            'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def get_notaire_nom_complet(self, obj):
+        if obj.notaire_maitre:
+            return f"{obj.notaire_maitre.nom} {obj.notaire_maitre.prenom}"
+        return None

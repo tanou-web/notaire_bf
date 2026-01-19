@@ -203,6 +203,7 @@ else:
         CORS_ALLOWED_ORIGINS = [
             "https://notaire-bf-1ns8.onrender.com",
             "https://notaire-admin-bf.onrender.com",
+            "https://notaire-bf.onrender.com",
              
             # Permettre localhost pour les tests même en prod
             "http://localhost:3000",

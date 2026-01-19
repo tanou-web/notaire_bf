@@ -342,12 +342,23 @@ class StatistiquesNotairesAPIView(APIView):
         from django.db.models import Count, Sum, Q
         from datetime import timedelta
 
-        date_debut = timezone.now() - timedelta(days=30)
+        periode = request.query_params.get('periode', '30j')
+        date_fin = timezone.now().date()
+        
+        if periode == '7j':
+            date_debut = date_fin - timedelta(days=7)
+        elif periode == '30j':
+            date_debut = date_fin - timedelta(days=30)
+        elif periode == '90j':
+            date_debut = date_fin - timedelta(days=90)
+        else:
+            date_debut = date_fin - timedelta(days=30)
+
         nom_sticker = request.query_params.get('nom_sticker')
 
         # Filtres de base
-        filtres_ventes = Q(date_vente__gte=date_debut)
-        filtres_ventes_notaires = Q(date_vente__gte=date_debut)
+        filtres_ventes = Q(date_vente__date__gte=date_debut)
+        filtres_ventes_notaires = Q(date_vente__date__gte=date_debut)
 
         if nom_sticker:
             filtres_ventes &= Q(sticker__nom__icontains=nom_sticker)
@@ -388,8 +399,9 @@ class StatistiquesNotairesAPIView(APIView):
 
         return Response({
             'periode': {
-                'debut': date_debut.date(),
-                'fin': timezone.now().date()
+                'debut': date_debut,
+                'fin': date_fin,
+                'label': periode
             },
             'filtre_nom': nom_sticker,
             'ventes_clients': {
