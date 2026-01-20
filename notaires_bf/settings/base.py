@@ -172,77 +172,43 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configuration du modèle utilisateur personnalisé
 AUTH_USER_MODEL = 'utilisateurs.User'
 # Configuration CORS flexible
-CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
+# settings.py
 
-if CORS_ALLOWED_ORIGINS_ENV:
-    # Utiliser les origines définies dans les variables d'environnement
-    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
-    CORS_ALLOW_ALL_ORIGINS = False
+# ===== CORS =====
+if DEBUG:
+    # Développement : autoriser toutes les origines (très permissif)
+    CORS_ALLOW_ALL_ORIGINS = True
 else:
-    # Configuration par défaut
-    if DEBUG:
-        # En développement : très permissif
-        CORS_ALLOWED_ORIGINS = [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3005",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-            "http://127.0.0.1:3002",
-            "http://127.0.0.1:3005",
-            "http://localhost:8080",
-            "http://127.0.0.1:8080",
-            "http://localhost:5173",  # Vite dev server
-            "http://127.0.0.1:5173",
-        ]
-        # En développement, on peut aussi autoriser toutes les origines localhost
-        CORS_ALLOW_ALL_ORIGINS = True  # Très permissif en dev
-    else:
-        # En production : origines spécifiques
-        CORS_ALLOWED_ORIGINS = [
-            "https://notaire-bf-1ns8.onrender.com",
-            "https://notaire-admin-bf.onrender.com",
-            "https://notaire-bf.onrender.com",
-             
-            # Permettre localhost pour les tests même en prod
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3005",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
-            "http://127.0.0.1:3002",
-            "http://127.0.0.1:3005",
-        ]
-        CORS_ALLOW_ALL_ORIGINS = False
+    # Production : autoriser uniquement le front officiel et localhost pour tests
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "https://notaire-bf-1ns8.onrender.com",
+        "https://notaire-admin-bf.onrender.com",
+        "https://notaire-bf.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3005",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",
+        "http://127.0.0.1:3005",
+    ]
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
+CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'x-api-key',
-    'cache-control',
-]
-CORS_EXPOSE_HEADERS = [
-    'Content-Disposition',
-    'X-Total-Count',
-    'X-Page-Count',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-api-key",
+    "cache-control",
 ]
 
 
