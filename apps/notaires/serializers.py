@@ -72,13 +72,16 @@ class NotaireCreateSerializer(serializers.ModelSerializer):
             'matricule', 'nom', 'prenom', 'photo',
             'telephone', 'email', 'adresse',
             'region', 'ville',
-
-            'assurance_rc_date_echeance'
+            'assurance_rc_date_echeance',
+            'assurance_rc_a_jour',  # ajouté
+            'actif'                 # ajouté
         ]
 
     def create(self, validated_data):
-        validated_data.setdefault('actif', True)
+        validated_data.setdefault('actif', True)          # s’il n’est pas envoyé
+        validated_data.setdefault('assurance_rc_a_jour', False)  # défaut
         return super().create(validated_data)
+
 
 
 class NotaireUpdateSerializer(serializers.ModelSerializer):
