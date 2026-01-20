@@ -11,10 +11,9 @@ class NotaireMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotairesNotaire
         fields = [
-            'id', 'matricule', 'nom', 'prenom', 'nom_complet', 'photo',
+            'id', 'nom', 'prenom', 'nom_complet', 'photo',
             'telephone', 'email', 'region_nom', 'ville_nom',
-            'adresse', 'actif', 'total_ventes',
-            'assurance_rc_a_jour', 'assurance_rc_date_echeance'
+            'adresse'
         ]
     
     def get_nom_complet(self, obj):
@@ -39,7 +38,7 @@ class NotaireSerializer(serializers.ModelSerializer):
             'actif', 'created_at', 'updated_at',
             'total_ventes', 'total_cotisations',
             'nombre_demandes', 'demandes_en_cours',
-            'assurance_rc_a_jour', 'assurance_rc_date_echeance', 'assurance_rc_valide'
+            'assurance_rc_date_echeance', 'assurance_rc_valide'
         ]
         read_only_fields = [
             'created_at', 'updated_at',
@@ -74,7 +73,6 @@ class NotaireCreateSerializer(serializers.ModelSerializer):
             'telephone', 'email', 'adresse',
             'region', 'ville',
 
-            'assurance_rc_a_jour',
             'assurance_rc_date_echeance'
         ]
 
@@ -90,7 +88,6 @@ class NotaireUpdateSerializer(serializers.ModelSerializer):
             'nom', 'prenom', 'photo', 'telephone',
             'email', 'adresse', 'region', 'ville',
             'actif',
-            'assurance_rc_a_jour',
             'assurance_rc_date_echeance'
         ]
 
