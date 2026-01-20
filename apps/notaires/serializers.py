@@ -27,7 +27,8 @@ class NotaireSerializer(serializers.ModelSerializer):
     nom_complet = serializers.SerializerMethodField()
     nombre_demandes = serializers.SerializerMethodField()
     demandes_en_cours = serializers.SerializerMethodField()
-    
+    assurance_rc_valide = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = NotairesNotaire
         fields = [
@@ -38,7 +39,7 @@ class NotaireSerializer(serializers.ModelSerializer):
             'actif', 'created_at', 'updated_at',
             'total_ventes', 'total_cotisations',
             'nombre_demandes', 'demandes_en_cours',
-            'assurance_rc_a_jour', 'assurance_rc_date_echeance'
+            'assurance_rc_a_jour', 'assurance_rc_date_echeance', 'assurance_rc_valide'
         ]
         read_only_fields = [
             'created_at', 'updated_at',
@@ -71,12 +72,16 @@ class NotaireCreateSerializer(serializers.ModelSerializer):
         fields = [
             'matricule', 'nom', 'prenom', 'photo',
             'telephone', 'email', 'adresse',
-            'region', 'ville'
+            'region', 'ville',
+
+            'assurance_rc_a_jour',
+            'assurance_rc_date_echeance'
         ]
-    
+
     def create(self, validated_data):
-        validated_data['actif'] = True
+        validated_data.setdefault('actif', True)
         return super().create(validated_data)
+
 
 class NotaireUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -84,8 +89,11 @@ class NotaireUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'nom', 'prenom', 'photo', 'telephone',
             'email', 'adresse', 'region', 'ville',
-            'actif', 'assurance_rc_a_jour', 'assurance_rc_date_echeance'
+            'actif',
+            'assurance_rc_a_jour',
+            'assurance_rc_date_echeance'
         ]
+
 
 class NotaireStatsSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -101,9 +109,9 @@ class NotaireStatsSerializer(serializers.Serializer):
     derniere_activite = serializers.DateTimeField(allow_null=True)
 
 class CotisationSerializer(serializers.ModelSerializer):
-    notaire_nom = serializers.CharField(source='notaire.nom_complet', read_only=True)
+    notaire_nom = serializers.SerializerMethodField()
     notaire_matricule = serializers.CharField(source='notaire.matricule', read_only=True)
-    
+
     class Meta:
         model = NotairesCotisation
         fields = [
@@ -111,7 +119,10 @@ class CotisationSerializer(serializers.ModelSerializer):
             'annee', 'montant', 'statut', 'date_paiement',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+
+    def get_notaire_nom(self, obj):
+        return f"{obj.notaire.nom} {obj.notaire.prenom}"
+
 
 class StagiaireSerializer(serializers.ModelSerializer):
     notaire_nom = serializers.CharField(

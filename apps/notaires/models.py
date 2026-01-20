@@ -22,11 +22,10 @@ class NotairesNotaire(models.Model):
     actif = models.BooleanField(default=True)
     total_ventes = models.DecimalField(max_digits=15, decimal_places=2,default=0)
     total_cotisations = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    
-    # Assurance Responsabilité Civile
-    assurance_rc_a_jour = models.BooleanField(default=False, verbose_name="Assurance RC à jour")
-    assurance_rc_date_echeance = models.DateField(blank=True, null=True, verbose_name="Date d'échéance de l'assurance RC")
-
+    assurance_rc_date_echeance = models.DateField(
+        blank=True, null=True,
+        verbose_name="Date d'échéance de l'assurance RC"
+    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,6 +35,13 @@ class NotairesNotaire(models.Model):
 
     def __str__(self):
         return f'{self.nom}  {self.prenom}'
+
+
+    @property
+    def assurance_rc_valide(self):
+        if not self.assurance_rc_date_echeance:
+            return False
+        return self.assurance_rc_date_echeance >= timezone.now().date()
 
 
 class NotairesCotisation(models.Model):

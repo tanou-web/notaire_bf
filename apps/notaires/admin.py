@@ -5,9 +5,13 @@ from .models import NotairesNotaire, NotairesCotisation  # ✅ SEULEMENT ces 2
 
 @admin.register(NotairesNotaire)
 class NotaireAdmin(admin.ModelAdmin):
-    list_display = ('matricule', 'nom_complet', 'email', 'telephone', 
-                   'region_display', 'ville_display', 'actif_display', 
-                   'total_ventes', 'total_cotisations')
+    list_display = (
+        'matricule', 'nom_complet', 'email',
+        'assurance_rc_status', 'assurance_rc_date_echeance',
+        'actif_display'
+    )
+
+
     list_filter = ('actif', 'region', 'ville')
     search_fields = ('matricule', 'nom', 'prenom', 'email', 'telephone')
     readonly_fields = ('created_at', 'updated_at', 'total_ventes', 'total_cotisations')
@@ -16,6 +20,9 @@ class NotaireAdmin(admin.ModelAdmin):
         ('Informations personnelles', {
             'fields': ('matricule', 'nom', 'prenom', 'email', 'telephone', 'photo')
         }),
+        ('Assurance Responsabilité Civile', {
+            'fields': ('assurance_rc_date_echeance',)
+        }), 
         ('Localisation', {
             'fields': ('region', 'ville', 'adresse')
         }),
@@ -29,6 +36,13 @@ class NotaireAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+    def assurance_rc_status(self, obj):
+        if obj.assurance_rc_valide:
+            return format_html('<span style="color: green;">✅ Valide</span>')
+        return format_html('<span style="color: red;">❌ Expirée</span>')
+
+    assurance_rc_status.short_description = "Assurance RC"
+
     
     def nom_complet(self, obj):
         return f"{obj.nom} {obj.prenom}"
