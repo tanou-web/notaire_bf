@@ -12,7 +12,18 @@ class Evenement(models.Model):
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    STATUT_CHOICES = [
+        ('brouillon', 'Brouillon'),
+        ('ouvert', 'Ouvert'),
+        ('complet', 'Complet'),
+        ('termine', 'Terminé'),
+        ('annule', 'Annulé'),
+    ]
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='brouillon'
+    )
     class Meta:
         managed = True
         db_table = 'evenements_evenement'
