@@ -2,75 +2,65 @@ from django.db import models
 from django.utils import timezone
 
 class Evenement(models.Model):
-    titre = models.CharField(max_length=200)
-    description = models.TextField()
-    date_debut = models.DateTimeField()
-    date_fin = models.DateTimeField()
-    lieu = models.CharField(max_length=200)
-    prix = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    image = models.ImageField(upload_to='evenements/', blank=True, null=True)
+    titre = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    STATUT_CHOICES = [
-        ('brouillon', 'Brouillon'),
-        ('ouvert', 'Ouvert'),
-        ('complet', 'Complet'),
-        ('termine', 'Terminé'),
-        ('annule', 'Annulé'),
-    ]
-    statut = models.CharField(
-        max_length=20,
-        choices=STATUT_CHOICES,
-        default='brouillon'
-    )
-    class Meta:
-        managed = True
-        db_table = 'evenements_evenement'
-        verbose_name = 'Événement'
-        verbose_name_plural = 'Événements'
 
     def __str__(self):
         return self.titre
 
-
-class Inscription(models.Model):
-    QUALITE_CHOICES = [
-        ('notaire', 'Notaire'),
-        ('collaborateur', 'Collaborateur de notaire'),
-        ('autre', 'Autre (à préciser)'),
+class EvenementChamp(models.Model):
+    TYPE_CHOICES = [
+        ('text', 'Texte'),
+        ('textarea', 'Zone de texte'),
+        ('number', 'Nombre'),
+        ('date', 'Date'),
+        ('checkbox', 'Case à cocher'),
+        ('select', 'Liste déroulante'),
+        ('file', 'Fichier'),
     ]
 
-    STATUT_PAIEMENT_CHOICES = [
-        ('en_attente', 'En attente'),
-        ('valide', 'Validé'),
-        ('rejete', 'Rejeté'),
-    ]
-
-    evenement = models.ForeignKey(Evenement, on_delete=models.CASCADE, related_name='inscriptions')
-    nom = models.CharField(max_length=100)
-    prenom = models.CharField(max_length=100)
-    nationalite = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, verbose_name="Téléphone / WhatsApp")
-    email = models.EmailField()
-    qualite = models.CharField(max_length=20, choices=QUALITE_CHOICES)
-    autre_qualite = models.CharField(max_length=100, blank=True, null=True)
-    
-    date_arrivee = models.DateField()
-    heure_arrivee = models.TimeField()
-    plan_vol = models.FileField(upload_to='evenements/plans_vol/', blank=True, null=True)
-    
-    statut_paiement = models.CharField(max_length=20, choices=STATUT_PAIEMENT_CHOICES, default='en_attente')
-    justificatif_paiement = models.FileField(upload_to='evenements/justificatifs/', blank=True, null=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        managed = True
-        db_table = 'evenements_inscription'
-        verbose_name = 'Inscription'
-        verbose_name_plural = 'Inscriptions'
+    evenement = models.ForeignKey(
+        Evenement,
+        on_delete=models.CASCADE,
+        related_name='champs'
+    )
+    label = models.CharField(max_length=255)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    obligatoire = models.BooleanField(default=False)
+    ordre = models.PositiveIntegerField(default=0)
+    options = models.JSONField(blank=True, null=True)
+    actif = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.nom} {self.prenom} - {self.evenement}"
+        return f"{self.label} ({self.evenement})"
+
+class Inscription(models.Model):
+    evenement = models.ForeignKey(Evenement, on_delete=models.CASCADE)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField()
+    telephone = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom}"
+
+class InscriptionReponse(models.Model):
+    inscription = models.ForeignKey(
+        Inscription,
+        on_delete=models.CASCADE,
+        related_name='reponses'
+    )
+
+    champ = models.ForeignKey(EvenementChamp, on_delete=models.CASCADE)
+
+    valeur_texte = models.TextField(blank=True, null=True)
+    valeur_nombre = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    valeur_date = models.DateField(blank=True, null=True)
+    valeur_fichier = models.FileField(upload_to='evenements/reponses/', blank=True, null=True)
+    valeur_bool = models.BooleanField(null=True)
+
+    def __str__(self):
+        return f"{self.inscription} - {self.champ.label}"

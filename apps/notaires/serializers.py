@@ -1,4 +1,4 @@
-# apps/notaires/serializers.py - COPIER-COLLER CE CODE
+# apps/notaires/serializers.py 
 from rest_framework import serializers
 from .models import NotairesNotaire, NotairesCotisation, NotairesStagiaire
 

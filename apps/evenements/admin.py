@@ -1,18 +1,21 @@
 from django.contrib import admin
-from .models import Evenement, Inscription
+from .models import Evenement, EvenementChamp, Inscription, InscriptionReponse
+
+class EvenementChampInline(admin.TabularInline):
+    model = EvenementChamp
+    extra = 1
+    fields = ('label', 'type', 'obligatoire', 'options', 'ordre', 'actif')
+    sortable_field_name = "ordre"
 
 @admin.register(Evenement)
 class EvenementAdmin(admin.ModelAdmin):
-    list_display = ('titre', 'date_debut', 'lieu', 'prix', 'actif', 'statut')
-    list_filter = ('actif', 'date_debut', 'statut')
-    search_fields = ('titre', 'lieu')
-    fields = ('titre', 'description', 'date_debut', 'date_fin', 'lieu', 'prix', 'image', 'actif', 'statut')
-    readonly_fields = ('created_at', 'updated_at')
-
+    list_display = ('titre', 'actif', 'created_at')
+    inlines = [EvenementChampInline]  # Permet d'ajouter des champs dynamiques directement dans l'événement
 
 @admin.register(Inscription)
 class InscriptionAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'prenom', 'evenement', 'qualite', 'statut_paiement', 'created_at')
-    list_filter = ('statut_paiement', 'qualite', 'evenement')
-    search_fields = ('nom', 'prenom', 'email', 'telephone')
-    readonly_fields = ('created_at', 'updated_at')
+    list_display = ('nom', 'prenom', 'email', 'telephone', 'evenement', 'created_at')
+
+@admin.register(InscriptionReponse)
+class InscriptionReponseAdmin(admin.ModelAdmin):
+    list_display = ('inscription', 'champ', 'valeur_texte', 'valeur_nombre', 'valeur_date', 'valeur_fichier', 'valeur_bool')

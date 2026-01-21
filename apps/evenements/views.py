@@ -1,45 +1,62 @@
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Evenement, Inscription
-from .serializers import EvenementSerializer, InscriptionSerializer
+
+from .models import Evenement, Inscription, EvenementChamp
+from .serializers import (
+    EvenementSerializer,
+    InscriptionSerializer,
+    InscriptionCreateSerializer
+)
+
 
 class EvenementViewSet(viewsets.ModelViewSet):
-    """API pour la gestion des événements"""
     queryset = Evenement.objects.filter(actif=True)
     serializer_class = EvenementSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['titre', 'lieu']
-    ordering_fields = ['date_debut', 'created_at']
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def formulaire(self, request, pk=None):
+        evenement = self.get_object()
+        champs = EvenementChamp.objects.filter(
+            evenement=evenement,
+            actif=True
+        ).order_by('ordre')
+
+        return Response({
+            "evenement": evenement.id,
+            "formulaire": [
+                {
+                    "id": c.id,
+                    "label": c.label,
+                    "type": c.type,
+                    "obligatoire": c.obligatoire,
+                    "options": c.options
+                }
+                for c in champs
+            ]
+        })
+
+
+class InscriptionViewSet(viewsets.ModelViewSet):
+    queryset = Inscription.objects.all()
+    permission_classes = [permissions.AllowAny]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return InscriptionCreateSerializer
+        return InscriptionSerializer
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['list', 'retrieve']:
             return [permissions.IsAdminUser()]
         return super().get_permissions()
 
-    # apps/evenements/views.py
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Evenement
 
 @api_view(['GET'])
 def evenement_choices(request):
-    STATUT_CHOICES = [choice[0] for choice in Evenement.STATUT_CHOICES]
-    return Response({'statuts': STATUT_CHOICES})
-
-
-class InscriptionViewSet(viewsets.ModelViewSet):
-    """API pour les inscriptions aux événements"""
-    queryset = Inscription.objects.all()
-    serializer_class = InscriptionSerializer
-    permission_classes = [permissions.AllowAny]
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
-        return super().get_permissions()
-
-    def perform_create(self, serializer):
-        # Logique additionnelle lors de l'inscription
-        serializer.save()
+    choices = Evenement.objects.values_list('id', 'titre')
+    return Response(list(choices))
