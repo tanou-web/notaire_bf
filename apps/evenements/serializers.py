@@ -14,13 +14,13 @@ class EvenementChampSerializer(serializers.ModelSerializer):
     class Meta:
         model = EvenementChamp
         fields = ['id', 'label', 'type', 'obligatoire', 'options', 'ordre']
-
+# serializers.py
 class EvenementSerializer(serializers.ModelSerializer):
     champs = EvenementChampSerializer(many=True, read_only=True)
-
     class Meta:
         model = Evenement
-        fields = ['id', 'titre', 'description', 'actif', 'created_at', 'champs']
+        fields = ['id', 'titre', 'description', 'statut', 'actif', 'created_at', 'champs']  # <- statut ajouté
+
 
 class InscriptionCreateSerializer(serializers.Serializer):
     evenement = serializers.PrimaryKeyRelatedField(
@@ -126,7 +126,7 @@ class InscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Inscription
-        fields = ['id', 'evenement', 'nom', 'prenom', 'email', 'telephone', 'created_at', 'reponses']
+        fields = ['id', 'evenement', 'nom', 'prenom', 'email', 'telephone', 'statut', 'created_at', 'reponses']  # <- statut ajouté
 
     def get_reponses(self, obj):
         return [

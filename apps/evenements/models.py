@@ -1,14 +1,24 @@
 from django.db import models
 from django.utils import timezone
 
+# models.py
 class Evenement(models.Model):
+    STATUT_CHOICES = [
+        ('brouillon', 'Brouillon'),
+        ('ouvert', 'Ouvert'),
+        ('complet', 'Complet'),
+        ('termine', 'Terminé'),
+        ('annule', 'Annulé'),
+    ]
+
     titre = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')  # <- ajouté
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.titre
+        return self.titre   
 
 class EvenementChamp(models.Model):
     TYPE_CHOICES = [
@@ -37,15 +47,23 @@ class EvenementChamp(models.Model):
         return f"{self.label} ({self.evenement})"
 
 class Inscription(models.Model):
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('validee', 'Validée'),
+        ('refusee', 'Refusée'),
+        ('annulee', 'Annulée'),
+    ]
+
     evenement = models.ForeignKey(Evenement, on_delete=models.CASCADE)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')  # <- ajouté
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.nom} {self.prenom}"
+        return f"{self.nom} {self.prenom}"  
 
 class InscriptionReponse(models.Model):
     inscription = models.ForeignKey(
