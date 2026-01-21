@@ -194,7 +194,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
         serializer = CotisationSerializer(cotisations, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def activer(self, request, pk=None):
         """Activer un notaire"""
         notaire = self.get_object()
@@ -207,7 +207,7 @@ class NotaireViewSet(viewsets.ModelViewSet):
             'notaire': NotaireMinimalSerializer(notaire).data
         })
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def desactiver(self, request, pk=None):
         """Désactiver un notaire"""
         notaire = self.get_object()

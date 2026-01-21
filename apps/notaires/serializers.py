@@ -3,21 +3,29 @@ from rest_framework import serializers
 from .models import NotairesNotaire, NotairesCotisation, NotairesStagiaire
 
 class NotaireMinimalSerializer(serializers.ModelSerializer):
-    """Serializer minimal pour les listes (performant)"""
     region_nom = serializers.CharField(source='region.nom', read_only=True, allow_null=True)
     ville_nom = serializers.CharField(source='ville.nom', read_only=True, allow_null=True)
     nom_complet = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = NotairesNotaire
         fields = [
-            'id', 'nom', 'prenom', 'nom_complet', 'photo',
-            'telephone', 'email', 'region_nom', 'ville_nom',
-            'adresse'
+            'id',
+            'nom',
+            'prenom',
+            'nom_complet',
+            'photo',
+            'telephone',
+            'email',
+            'region_nom',
+            'ville_nom',
+            'adresse',
+            'actif', 
         ]
-    
+
     def get_nom_complet(self, obj):
         return f"{obj.nom} {obj.prenom}"
+
 
 class NotaireSerializer(serializers.ModelSerializer):
     """Serializer complet pour les détails d'un notaire"""
@@ -65,26 +73,38 @@ class NotaireSerializer(serializers.ModelSerializer):
         except ImportError:
             return 0
 
-class NotaireCreateSerializer(serializers.ModelSerializer):
+class SafeModelSerializer(serializers.ModelSerializer):
+    def to_internal_value(self, data):
+        allowed = set(self.fields.keys())
+        cleaned = {k: v for k, v in data.items() if k in allowed}
+        return super().to_internal_value(cleaned)
+
+
+class NotaireCreateSerializer(SafeModelSerializer):
     class Meta:
         model = NotairesNotaire
         fields = [
-            'matricule', 'nom', 'prenom', 'photo',
-            'telephone', 'email', 'adresse',
-            'region', 'ville',
+            'matricule',
+            'nom',
+            'prenom',
+            'photo',
+            'telephone',
+            'email',
+            'adresse',
+            'region',
+            'ville',
             'assurance_rc_date_echeance',
-            'assurance_rc_a_jour',  # ajouté
-            'actif'                 # ajouté
+            'actif',
         ]
 
     def create(self, validated_data):
-        validated_data.setdefault('actif', True)          # s’il n’est pas envoyé
-        validated_data.setdefault('assurance_rc_a_jour', False)  # défaut
+        validated_data.setdefault('actif', True)
         return super().create(validated_data)
 
 
 
-class NotaireUpdateSerializer(serializers.ModelSerializer):
+
+class NotaireUpdateSerializer(SafeModelSerializer):
     class Meta:
         model = NotairesNotaire
         fields = [
