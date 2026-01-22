@@ -1,54 +1,71 @@
 from rest_framework import serializers
 from .models import (
     Evenement,
+    EvenementChamp,
     Inscription,
-    InscriptionReponse,
-    EvenementChamp
+    InscriptionReponse
 )
 
-# serializers.py
-from rest_framework import serializers
-from .models import Evenement, EvenementChamp, Inscription, InscriptionReponse
-
+# =========================
+# EVENEMENT / CHAMPS
+# =========================
 
 class EvenementChampCreateSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)  # 🔴 IMPORTANT pour update
+
     class Meta:
         model = EvenementChamp
-        fields = ['label', 'type', 'obligatoire', 'ordre', 'options', 'actif']
+        fields = ['id', 'label', 'type', 'obligatoire', 'ordre', 'options', 'actif']
+
 
 class EvenementSerializer(serializers.ModelSerializer):
-    champs = EvenementChampCreateSerializer(many=True)  # plus read_only
+    champs = EvenementChampCreateSerializer(many=True)
 
     class Meta:
         model = Evenement
-        fields = ['id', 'titre', 'description', 'statut', 'actif', 'created_at', 'champs']
+        fields = [
+            'id',
+            'titre',
+            'description',
+            'statut',
+            'actif',
+            'created_at',
+            'champs'
+        ]
 
     def create(self, validated_data):
         champs_data = validated_data.pop('champs', [])
         evenement = Evenement.objects.create(**validated_data)
+
         for champ_data in champs_data:
-            EvenementChamp.objects.create(evenement=evenement, **champ_data)
+            EvenementChamp.objects.create(
+                evenement=evenement,
+                **champ_data
+            )
+
         return evenement
 
     def update(self, instance, validated_data):
         champs_data = validated_data.pop('champs', [])
 
-        # 1️⃣ Mise à jour de l'événement
+        # 1️⃣ Update événement
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # 2️⃣ IDs envoyés par le frontend
+        # 2️⃣ IDs reçus du frontend
         incoming_ids = [
-            champ.get('id') for champ in champs_data if champ.get('id')
+            champ.get('id')
+            for champ in champs_data
+            if champ.get('id')
         ]
 
-        # 3️⃣ Suppression des champs retirés
+        # 3️⃣ Supprimer les champs supprimés côté frontend
         EvenementChamp.objects.filter(
             evenement=instance
         ).exclude(id__in=incoming_ids).delete()
 
-        # 4️⃣ Création / Mise à jour des champs
+        # 4️⃣ Créer / mettre à jour les champs
         for champ_data in champs_data:
             champ_id = champ_data.pop('id', None)
 
@@ -71,6 +88,9 @@ class EvenementSerializer(serializers.ModelSerializer):
         return instance
 
 
+# =========================
+# INSCRIPTION (PUBLIC)
+# =========================
 
 class InscriptionCreateSerializer(serializers.Serializer):
     evenement = serializers.PrimaryKeyRelatedField(
@@ -86,7 +106,6 @@ class InscriptionCreateSerializer(serializers.Serializer):
         write_only=True
     )
 
-    # 🔐 VALIDATION FORTE
     def validate(self, data):
         evenement = data['evenement']
         reponses = data['reponses']
@@ -97,11 +116,7 @@ class InscriptionCreateSerializer(serializers.Serializer):
         )
 
         champs_map = {c.id: c for c in champs}
-
-        champs_obligatoires = {
-            c.id for c in champs if c.obligatoire
-        }
-
+        champs_obligatoires = {c.id for c in champs if c.obligatoire}
         champs_envoyes = {r.get('champ') for r in reponses}
 
         manquants = champs_obligatoires - champs_envoyes
@@ -142,7 +157,6 @@ class InscriptionCreateSerializer(serializers.Serializer):
 
         return data
 
-    # 💾 ENREGISTREMENT
     def create(self, validated_data):
         reponses_data = validated_data.pop('reponses')
         inscription = Inscription.objects.create(**validated_data)
@@ -171,12 +185,27 @@ class InscriptionCreateSerializer(serializers.Serializer):
 
         return inscription
 
+
+# =========================
+# INSCRIPTION (ADMIN)
+# =========================
+
 class InscriptionSerializer(serializers.ModelSerializer):
     reponses = serializers.SerializerMethodField()
 
     class Meta:
         model = Inscription
-        fields = ['id', 'evenement', 'nom', 'prenom', 'email', 'telephone', 'statut', 'created_at', 'reponses']  # <- statut ajouté
+        fields = [
+            'id',
+            'evenement',
+            'nom',
+            'prenom',
+            'email',
+            'telephone',
+            'statut',
+            'created_at',
+            'reponses'
+        ]
 
     def get_reponses(self, obj):
         return [
@@ -190,5 +219,6 @@ class InscriptionSerializer(serializers.ModelSerializer):
                     r.valeur_bool or
                     str(r.valeur_fichier) if r.valeur_fichier else None
                 )
-            } for r in obj.reponses.all()
+            }
+            for r in obj.reponses.all()
         ]
