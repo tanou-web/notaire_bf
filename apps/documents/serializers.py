@@ -21,10 +21,10 @@ class DocumentSerializer(serializers.ModelSerializer):
         return f"{obj.prix:,} FCFA".replace(",", " ")
     
     def validate_delai_heures(self, value):
-        """Validation du délai (48 ou 72 heures)"""
-        if value not in [48, 72]:
-            raise serializers.ValidationError("Le délai doit être 48 ou 72 heures")
+        if value != 120:
+            raise serializers.ValidationError("Le délai doit être de 5 jours (120 heures)")
         return value
+    
     def get_fichier_url(self, obj):
         """Générer l'URL complète du fichier"""
         request = self.context.get('request')
