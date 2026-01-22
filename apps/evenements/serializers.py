@@ -45,47 +45,51 @@ class EvenementSerializer(serializers.ModelSerializer):
 
         return evenement
 
+    from django.db import transaction
+
     def update(self, instance, validated_data):
         champs_data = validated_data.pop('champs', [])
 
-        # 1️⃣ Update événement
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
 
-        # 2️⃣ IDs reçus du frontend
-        incoming_ids = [
-            champ.get('id')
-            for champ in champs_data
-            if champ.get('id')
-        ]
+            # 1️⃣ Update des champs simples de l’événement
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        # 3️⃣ Supprimer les champs supprimés côté frontend
-        EvenementChamp.objects.filter(
-            evenement=instance
-        ).exclude(id__in=incoming_ids).delete()
+            # 2️⃣ Champs existants en base
+            champs_existants = {
+                champ.id: champ
+                for champ in instance.champs.all()
+            }
 
-        # 4️⃣ Créer / mettre à jour les champs
-        for champ_data in champs_data:
-            champ_id = champ_data.pop('id', None)
+            ids_conserves = []
 
-            if champ_id:
-                # UPDATE
-                champ = EvenementChamp.objects.get(
-                    id=champ_id,
-                    evenement=instance
-                )
-                for key, value in champ_data.items():
-                    setattr(champ, key, value)
-                champ.save()
-            else:
-                # CREATE
-                EvenementChamp.objects.create(
-                    evenement=instance,
-                    **champ_data
-                )
+            # 3️⃣ CREATE / UPDATE
+            for champ_data in champs_data:
+                champ_id = champ_data.pop('id', None)
+
+                # 🟢 UPDATE (id réel en base)
+                if champ_id and champ_id in champs_existants:
+                    champ = champs_existants[champ_id]
+                    for key, value in champ_data.items():
+                        setattr(champ, key, value)
+                    champ.save()
+                    ids_conserves.append(champ_id)
+
+                # 🟢 CREATE (nouveau champ)
+                else:
+                    nouveau = EvenementChamp.objects.create(
+                        evenement=instance,
+                        **champ_data
+                    )
+                    ids_conserves.append(nouveau.id)
+
+            # 4️⃣ DELETE (champs supprimés côté frontend)
+            instance.champs.exclude(id__in=ids_conserves).delete()
 
         return instance
+
 
 
 # =========================
