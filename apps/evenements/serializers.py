@@ -33,42 +33,43 @@ class EvenementSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         champs_data = validated_data.pop('champs', [])
 
-        # Mise à jour des infos de l'événement
+        # 1️⃣ Mise à jour de l'événement
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # IDs envoyés par le frontend
+        # 2️⃣ IDs envoyés par le frontend
         incoming_ids = [
             champ.get('id') for champ in champs_data if champ.get('id')
         ]
 
-        # 🔥 SUPPRESSION des champs retirés du formulaire
+        # 3️⃣ Suppression des champs retirés
         EvenementChamp.objects.filter(
             evenement=instance
         ).exclude(id__in=incoming_ids).delete()
 
-        # 🔁 Création / Mise à jour
+        # 4️⃣ Création / Mise à jour des champs
         for champ_data in champs_data:
             champ_id = champ_data.pop('id', None)
 
-        if champ_id:
-            # UPDATE
-            champ = EvenementChamp.objects.get(
-                id=champ_id,
-                evenement=instance
-            )
-            for key, value in champ_data.items():
-                setattr(champ, key, value)
-            champ.save()
-        else:
-            # CREATE
-            EvenementChamp.objects.create(
-                evenement=instance,
-                **champ_data
-            )
+            if champ_id:
+                # UPDATE
+                champ = EvenementChamp.objects.get(
+                    id=champ_id,
+                    evenement=instance
+                )
+                for key, value in champ_data.items():
+                    setattr(champ, key, value)
+                champ.save()
+            else:
+                # CREATE
+                EvenementChamp.objects.create(
+                    evenement=instance,
+                    **champ_data
+                )
 
         return instance
+
 
 
 class InscriptionCreateSerializer(serializers.Serializer):
