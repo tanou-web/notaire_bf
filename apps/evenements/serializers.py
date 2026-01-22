@@ -32,22 +32,42 @@ class EvenementSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         champs_data = validated_data.pop('champs', [])
-        instance.titre = validated_data.get('titre', instance.titre)
-        instance.description = validated_data.get('description', instance.description)
-        instance.statut = validated_data.get('statut', instance.statut)
-        instance.actif = validated_data.get('actif', instance.actif)
+
+        # Mise à jour des infos de l'événement
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
 
-        # Mettre à jour les champs existants ou en créer des nouveaux
+        # IDs envoyés par le frontend
+        incoming_ids = [
+            champ.get('id') for champ in champs_data if champ.get('id')
+        ]
+
+        # 🔥 SUPPRESSION des champs retirés du formulaire
+        EvenementChamp.objects.filter(
+            evenement=instance
+        ).exclude(id__in=incoming_ids).delete()
+
+        # 🔁 Création / Mise à jour
         for champ_data in champs_data:
-            champ_id = champ_data.get('id', None)
-            if champ_id:
-                champ = EvenementChamp.objects.get(id=champ_id, evenement=instance)
-                for key, value in champ_data.items():
-                    setattr(champ, key, value)
-                champ.save()
-            else:
-                EvenementChamp.objects.create(evenement=instance, **champ_data)
+            champ_id = champ_data.pop('id', None)
+
+        if champ_id:
+            # UPDATE
+            champ = EvenementChamp.objects.get(
+                id=champ_id,
+                evenement=instance
+            )
+            for key, value in champ_data.items():
+                setattr(champ, key, value)
+            champ.save()
+        else:
+            # CREATE
+            EvenementChamp.objects.create(
+                evenement=instance,
+                **champ_data
+            )
+
         return instance
 
 
