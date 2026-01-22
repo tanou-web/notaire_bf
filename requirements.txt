@@ -9,13 +9,13 @@ diff-match-patch==20241021
 dj-database-url==3.0.1
 Django==5.2.5
 django-admin-rangefilter==0.13.5
+django-admin-sortable2==2.3.1
 django-cors-headers==4.9.0
 django-crispy-forms==2.4
 django-filter==25.2
 django-import-export==4.3.14
 django-rest-framework==0.1.0
 django-storages==1.14.6
-cloudinary==1.40.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 drf-nested-routers==0.95.0
@@ -34,7 +34,7 @@ python-dotenv==1.1.1
 pytz==2025.2
 PyYAML==6.0.3
 qrcode==8.2
-reportlab==4.0.7
+reportlab==4.4.7
 requests==2.32.4
 s3transfer==0.16.0
 six==1.17.0
