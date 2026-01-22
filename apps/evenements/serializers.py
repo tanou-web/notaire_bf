@@ -10,16 +10,45 @@ from .models import (
 from rest_framework import serializers
 from .models import Evenement, EvenementChamp, Inscription, InscriptionReponse
 
-class EvenementChampSerializer(serializers.ModelSerializer):
+
+class EvenementChampCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EvenementChamp
-        fields = ['id', 'label', 'type', 'obligatoire', 'options', 'ordre']
-# serializers.py
+        fields = ['label', 'type', 'obligatoire', 'ordre', 'options', 'actif']
+
 class EvenementSerializer(serializers.ModelSerializer):
-    champs = EvenementChampSerializer(many=True, read_only=True)
+    champs = EvenementChampCreateSerializer(many=True)  # plus read_only
+
     class Meta:
         model = Evenement
-        fields = ['id', 'titre', 'description', 'statut', 'actif', 'created_at', 'champs']  # <- statut ajouté
+        fields = ['id', 'titre', 'description', 'statut', 'actif', 'created_at', 'champs']
+
+    def create(self, validated_data):
+        champs_data = validated_data.pop('champs', [])
+        evenement = Evenement.objects.create(**validated_data)
+        for champ_data in champs_data:
+            EvenementChamp.objects.create(evenement=evenement, **champ_data)
+        return evenement
+
+    def update(self, instance, validated_data):
+        champs_data = validated_data.pop('champs', [])
+        instance.titre = validated_data.get('titre', instance.titre)
+        instance.description = validated_data.get('description', instance.description)
+        instance.statut = validated_data.get('statut', instance.statut)
+        instance.actif = validated_data.get('actif', instance.actif)
+        instance.save()
+
+        # Mettre à jour les champs existants ou en créer des nouveaux
+        for champ_data in champs_data:
+            champ_id = champ_data.get('id', None)
+            if champ_id:
+                champ = EvenementChamp.objects.get(id=champ_id, evenement=instance)
+                for key, value in champ_data.items():
+                    setattr(champ, key, value)
+                champ.save()
+            else:
+                EvenementChamp.objects.create(evenement=instance, **champ_data)
+        return instance
 
 
 class InscriptionCreateSerializer(serializers.Serializer):
