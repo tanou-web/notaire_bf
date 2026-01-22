@@ -1,5 +1,5 @@
 from django.contrib import admin
-from adminsortable2.admin import SortableInlineAdminMixin
+from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from .models import Evenement, EvenementChamp, Inscription, InscriptionReponse
 
 
@@ -7,11 +7,11 @@ class EvenementChampInline(SortableInlineAdminMixin, admin.TabularInline):
     model = EvenementChamp
     extra = 1
     fields = ('label', 'type', 'obligatoire', 'options', 'ordre', 'actif')
-    ordering = ('ordre',)  
+    ordering = ('ordre',)
 
 
 @admin.register(Evenement)
-class EvenementAdmin(admin.ModelAdmin):
+class EvenementAdmin(SortableAdminBase, admin.ModelAdmin):
     list_display = ('titre', 'actif', 'created_at')
     inlines = [EvenementChampInline]
 
