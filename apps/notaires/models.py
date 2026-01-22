@@ -5,37 +5,44 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
-from django.utils import timezone
-from django.db import models
-
-
 class NotairesNotaire(models.Model):
     matricule = models.CharField(unique=True, max_length=50)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
-    photo = models.ImageField(upload_to='notaires/photos/', blank=True, null=True, verbose_name="Photo du notaire")
+    photo = models.ImageField(upload_to='notaires/photos/', blank=True, null=True)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
-    region = models.ForeignKey('geographie.GeographieRegion', on_delete=models.SET_NULL, blank=True, null=True)
-    ville = models.ForeignKey('geographie.GeographieVille', on_delete=models.SET_NULL,blank=True, null=True)
+    region = models.ForeignKey(
+        'geographie.GeographieRegion',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True
+    )
+    ville = models.ForeignKey(
+        'geographie.GeographieVille',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True
+    )
     adresse = models.TextField()
     actif = models.BooleanField(default=True)
-    total_ventes = models.DecimalField(max_digits=15, decimal_places=2,default=0)
+    total_ventes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     total_cotisations = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
     assurance_rc_date_echeance = models.DateField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         verbose_name="Date d'échéance de l'assurance RC"
     )
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = True
         db_table = 'notaires_notaire'
 
     def __str__(self):
-        return f'{self.nom}  {self.prenom}'
-
+        return f"{self.nom} {self.prenom}"
 
     @property
     def assurance_rc_valide(self):

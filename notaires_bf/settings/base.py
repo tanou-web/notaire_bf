@@ -34,7 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_filters',
-
+    'adminsortable2',
     # Applications tierces
     'rest_framework',
     'corsheaders',

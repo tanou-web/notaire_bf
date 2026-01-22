@@ -10,8 +10,7 @@ from django.db import models
 
 class DocumentsDocument(models.Model):
     DELAI_CHOICES = (
-        (48, '48 heures'),
-        (72, '72 heures'),
+        (5, '5 jours'),
     )
 
     id = models.AutoField(primary_key=True)
