@@ -162,15 +162,15 @@ class InscriptionCreateSerializer(serializers.Serializer):
                     f"{champ.label} doit être vrai ou faux"
                 )
 
+        # Vérifier si l'événement a des places restantes
+        if evenement.nombre_places <= 0:
+            raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
+
         return data
 
     def create(self, validated_data):
         reponses_data = validated_data.pop('reponses')
         evenement = validated_data['evenement']
-
-        # Vérifier à nouveau les places
-        if evenement.nombre_places <= 0:
-            raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
 
         # Créer l'inscription
         inscription = Inscription.objects.create(**validated_data)
@@ -199,17 +199,6 @@ class InscriptionCreateSerializer(serializers.Serializer):
         evenement.save()
 
         return inscription
-
-
-    def validate(self, data):
-        evenement = data['evenement']
-
-        # Vérifier si l'événement a des places restantes
-        if evenement.nombre_places <= 0:
-            raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
-
-        # … ensuite le reste de ta validation champs
-
 
 
 # =========================
