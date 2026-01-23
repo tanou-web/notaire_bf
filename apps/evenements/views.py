@@ -15,6 +15,19 @@ class EvenementViewSet(viewsets.ModelViewSet):
     serializer_class = EvenementSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_permissions(self):
+        """Permissions différentes selon l'action"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        """Permettre aux admins de voir tous les événements, y compris inactifs"""
+        queryset = Evenement.objects.all()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(actif=True)
+        return queryset
+
     @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
     def formulaire(self, request, pk=None):
         evenement = self.get_object()

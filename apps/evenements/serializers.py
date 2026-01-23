@@ -31,6 +31,7 @@ class EvenementSerializer(serializers.ModelSerializer):
             'description',
             'statut',
             'actif',
+            'nombre_places',
             'created_at',
             'champs'
         ]
