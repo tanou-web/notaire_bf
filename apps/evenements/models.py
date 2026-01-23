@@ -16,6 +16,7 @@ class Evenement(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')  # <- ajouté
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    nombre_places = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.titre   

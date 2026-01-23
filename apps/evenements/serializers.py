@@ -165,17 +165,20 @@ class InscriptionCreateSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         reponses_data = validated_data.pop('reponses')
+        evenement = validated_data['evenement']
+
+        # Vérifier à nouveau les places
+        if evenement.nombre_places <= 0:
+            raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
+
+        # Créer l'inscription
         inscription = Inscription.objects.create(**validated_data)
 
+        # Créer les réponses aux champs
         for r in reponses_data:
             champ = EvenementChamp.objects.get(id=r['champ'])
             valeur = r.get('valeur')
-
-            reponse = InscriptionReponse(
-                inscription=inscription,
-                champ=champ
-            )
-
+            reponse = InscriptionReponse(inscription=inscription, champ=champ)
             if champ.type in ['text', 'textarea', 'select']:
                 reponse.valeur_texte = valeur
             elif champ.type == 'number':
@@ -186,10 +189,26 @@ class InscriptionCreateSerializer(serializers.Serializer):
                 reponse.valeur_bool = valeur
             elif champ.type == 'file':
                 reponse.valeur_fichier = valeur
-
             reponse.save()
 
+        # Décrémenter le nombre de places
+        evenement.nombre_places -= 1
+        if evenement.nombre_places <= 0:
+            evenement.statut = 'complet'  # mettre à jour le statut
+        evenement.save()
+
         return inscription
+
+
+    def validate(self, data):
+        evenement = data['evenement']
+
+        # Vérifier si l'événement a des places restantes
+        if evenement.nombre_places <= 0:
+            raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
+
+        # … ensuite le reste de ta validation champs
+
 
 
 # =========================
