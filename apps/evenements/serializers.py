@@ -162,6 +162,20 @@ class InscriptionCreateSerializer(serializers.Serializer):
                     f"{champ.label} doit être vrai ou faux"
                 )
 
+            if champ.type == 'date' and valeur:
+                from datetime import datetime
+                try:
+                    # Essayer d'abord le format ISO (AAAA-MM-JJ)
+                    datetime.strptime(str(valeur), '%Y-%m-%d')
+                except ValueError:
+                    try:
+                        # Essayer le format français (JJ/MM/AAAA)
+                        datetime.strptime(str(valeur), '%d/%m/%Y')
+                    except ValueError:
+                        raise serializers.ValidationError(
+                            f"Format de date invalide pour {champ.label}. Utilisez AAAA-MM-JJ ou JJ/MM/AAAA"
+                        )
+
         # Vérifier si l'événement a des places restantes
         if evenement.nombre_places <= 0:
             raise serializers.ValidationError("Toutes les places pour cet événement sont déjà réservées.")
@@ -185,7 +199,20 @@ class InscriptionCreateSerializer(serializers.Serializer):
             elif champ.type == 'number':
                 reponse.valeur_nombre = valeur
             elif champ.type == 'date':
-                reponse.valeur_date = valeur
+                from datetime import datetime
+                # Convertir la date du format français JJ/MM/AAAA vers AAAA-MM-JJ
+                if isinstance(valeur, str) and valeur:
+                    try:
+                        # Essayer d'abord le format ISO (AAAA-MM-JJ)
+                        reponse.valeur_date = datetime.strptime(valeur, '%Y-%m-%d').date()
+                    except ValueError:
+                        try:
+                            # Essayer le format français (JJ/MM/AAAA)
+                            reponse.valeur_date = datetime.strptime(valeur, '%d/%m/%Y').date()
+                        except ValueError:
+                            raise serializers.ValidationError(f"Format de date invalide pour {champ.label}. Utilisez AAAA-MM-JJ ou JJ/MM/AAAA")
+                else:
+                    reponse.valeur_date = valeur
             elif champ.type == 'checkbox':
                 reponse.valeur_bool = valeur
             elif champ.type == 'file':
