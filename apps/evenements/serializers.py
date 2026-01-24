@@ -141,10 +141,18 @@ class InscriptionCreateSerializer(serializers.Serializer):
 
             champ = champs_map[champ_id]
 
-            if champ.obligatoire and valeur in [None, '', []]:
-                raise serializers.ValidationError(
-                    f"{champ.label} est obligatoire"
-                )
+            # Validation des champs obligatoires
+            if champ.obligatoire:
+                if champ.type == 'file':
+                    # Pour les fichiers, vérifier que c'est un fichier valide
+                    if not valeur or (hasattr(valeur, 'size') and valeur.size == 0):
+                        raise serializers.ValidationError(
+                            f"{champ.label} est obligatoire (fichier requis)"
+                        )
+                elif valeur in [None, '', []]:
+                    raise serializers.ValidationError(
+                        f"{champ.label} est obligatoire"
+                    )
 
             if champ.type == 'number' and not isinstance(valeur, (int, float)):
                 raise serializers.ValidationError(
@@ -174,6 +182,22 @@ class InscriptionCreateSerializer(serializers.Serializer):
                     except ValueError:
                         raise serializers.ValidationError(
                             f"Format de date invalide pour {champ.label}. Utilisez AAAA-MM-JJ ou JJ/MM/AAAA"
+                        )
+
+            if champ.type == 'file' and valeur:
+                # Validation basique du fichier
+                if hasattr(valeur, 'size') and valeur.size > 10 * 1024 * 1024:  # 10MB max
+                    raise serializers.ValidationError(
+                        f"Fichier trop volumineux pour {champ.label} (max 10MB)"
+                    )
+                # Vérifier l'extension si nécessaire
+                allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+                if hasattr(valeur, 'name'):
+                    import os
+                    ext = os.path.splitext(valeur.name)[1].lower()
+                    if ext not in allowed_extensions:
+                        raise serializers.ValidationError(
+                            f"Type de fichier non autorisé pour {champ.label}. Extensions acceptées: {', '.join(allowed_extensions)}"
                         )
 
         # Vérifier si l'événement a des places restantes
