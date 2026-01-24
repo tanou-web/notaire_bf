@@ -203,7 +203,7 @@ else:
         "http://127.0.0.1:3005",
     ]
 
-CORS_ALLOW_ALL_ORIGINS = True  # TEMPORAIRE pour tests locaux
+CORS_ALLOW_ALL_ORIGINS = False  # REMETTRE A False pour la production
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
