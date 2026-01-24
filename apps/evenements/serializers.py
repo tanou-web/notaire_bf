@@ -225,7 +225,9 @@ class InscriptionCreateSerializer(serializers.Serializer):
             evenement.statut = 'complet'  # mettre à jour le statut
         evenement.save()
 
-        return inscription
+        # Retourner l'inscription avec les réponses
+        serializer = InscriptionSerializer(inscription)
+        return serializer.data
 
 
 # =========================
@@ -250,17 +252,25 @@ class InscriptionSerializer(serializers.ModelSerializer):
         ]
 
     def get_reponses(self, obj):
-        return [
-            {
+        reponses = []
+        for r in obj.reponses.all():
+            # Déterminer la valeur en fonction du type de champ
+            valeur = None
+            if r.champ.type == 'text' or r.champ.type == 'textarea' or r.champ.type == 'select':
+                valeur = r.valeur_texte
+            elif r.champ.type == 'number':
+                valeur = r.valeur_nombre
+            elif r.champ.type == 'date':
+                valeur = r.valeur_date
+            elif r.champ.type == 'checkbox':
+                valeur = r.valeur_bool
+            elif r.champ.type == 'file':
+                valeur = str(r.valeur_fichier) if r.valeur_fichier else None
+
+            reponses.append({
                 "champ": r.champ.label,
                 "type": r.champ.type,
-                "valeur": (
-                    r.valeur_texte or
-                    r.valeur_nombre or
-                    r.valeur_date or
-                    r.valeur_bool or
-                    str(r.valeur_fichier) if r.valeur_fichier else None
-                )
-            }
-            for r in obj.reponses.all()
-        ]
+                "valeur": valeur
+            })
+
+        return reponses
