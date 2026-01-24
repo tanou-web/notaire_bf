@@ -249,9 +249,39 @@ class InscriptionCreateSerializer(serializers.Serializer):
             evenement.statut = 'complet'  # mettre à jour le statut
         evenement.save()
 
-        # Retourner l'inscription avec les réponses
-        serializer = InscriptionSerializer(inscription)
-        return serializer.data
+        # Retourner l'inscription avec les réponses (format manuel pour éviter les erreurs de sérialisation)
+        reponses_data = []
+        for r in inscription.reponses.all():
+            # Déterminer la valeur en fonction du type de champ
+            valeur = None
+            if r.champ.type == 'text' or r.champ.type == 'textarea' or r.champ.type == 'select':
+                valeur = r.valeur_texte
+            elif r.champ.type == 'number':
+                valeur = r.valeur_nombre
+            elif r.champ.type == 'date':
+                valeur = r.valeur_date.isoformat() if r.valeur_date else None
+            elif r.champ.type == 'checkbox':
+                valeur = r.valeur_bool
+            elif r.champ.type == 'file':
+                valeur = str(r.valeur_fichier) if r.valeur_fichier else None
+
+            reponses_data.append({
+                "champ": r.champ.label,
+                "type": r.champ.type,
+                "valeur": valeur
+            })
+
+        return {
+            'id': inscription.id,
+            'evenement': inscription.evenement.id,  # Retourner l'ID, pas l'objet
+            'nom': inscription.nom,
+            'prenom': inscription.prenom,
+            'email': inscription.email,
+            'telephone': inscription.telephone,
+            'statut': inscription.statut,
+            'created_at': inscription.created_at,
+            'reponses': reponses_data
+        }
 
 
 # =========================
@@ -298,3 +328,4 @@ class InscriptionSerializer(serializers.ModelSerializer):
             })
 
         return reponses
+
