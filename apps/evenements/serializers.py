@@ -1,3 +1,4 @@
+import json
 from rest_framework import serializers
 from django.db import transaction
  
@@ -112,6 +113,44 @@ class InscriptionCreateSerializer(serializers.Serializer):
         child=serializers.DictField(),
         write_only=True
     )
+
+    def to_internal_value(self, data):
+        """
+        Parser manuellement le JSON du champ 'reponses' quand il vient du FormData
+        """
+        import json
+        from rest_framework.exceptions import ValidationError
+
+        # COPIE SUPERFICIELLE POUR POUVOIR MODIFIER
+        if hasattr(data, '_mutable'):
+            data = data.copy()
+
+        # SI 'reponses' EST UNE STRING (cas du FormData/Upload), ON LA PARSE
+        if 'reponses' in data and isinstance(data['reponses'], str):
+            try:
+                data['reponses'] = json.loads(data['reponses'])
+            except ValueError:
+                raise ValidationError({'reponses': ['Format JSON invalide.']})
+
+        return super().to_internal_value(data)
+
+    def to_internal_value(self, data):
+        """
+        Parser manuellement le JSON dans le champ 'reponses' quand c'est une string
+        (nécessaire pour les uploads multipart/form-data)
+        """
+        # COPIE SUPERFICIELLE POUR POUVOIR MODIFIER
+        if hasattr(data, '_mutable'):
+            data = data.copy()
+
+        # SI 'reponses' EST UNE STRING (cas du FormData/Upload), ON LA PARSE
+        if 'reponses' in data and isinstance(data['reponses'], str):
+            try:
+                data['reponses'] = json.loads(data['reponses'])
+            except ValueError:
+                raise serializers.ValidationError({'reponses': ['Format JSON invalide.']})
+
+        return super().to_internal_value(data)
 
     def validate(self, data):
         evenement = data['evenement']
