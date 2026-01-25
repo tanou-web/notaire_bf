@@ -100,6 +100,39 @@ class EvenementSerializer(serializers.ModelSerializer):
 # INSCRIPTION (PUBLIC)
 # =========================
 
+class ReponseChampSerializer(serializers.Serializer):
+    """Serializer pour une réponse individuelle à un champ"""
+    champ = serializers.IntegerField()
+    valeur = serializers.CharField()  # On accepte tout comme string, on caste après
+
+
+class ReponsesJSONField(serializers.Field):
+    """Champ personnalisé qui parse automatiquement le JSON stringifié"""
+
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            import json
+            try:
+                parsed_data = json.loads(data)
+                # Valider chaque élément avec ReponseChampSerializer
+                serializer = ReponseChampSerializer(data=parsed_data, many=True)
+                if serializer.is_valid():
+                    return serializer.validated_data
+                else:
+                    raise serializers.ValidationError(serializer.errors)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError('Format JSON invalide pour les réponses.')
+        elif isinstance(data, list):
+            # Si c'est déjà une liste (cas rare), la valider directement
+            serializer = ReponseChampSerializer(data=data, many=True)
+            if serializer.is_valid():
+                return serializer.validated_data
+            else:
+                raise serializers.ValidationError(serializer.errors)
+        else:
+            raise serializers.ValidationError('Les réponses doivent être une liste ou une chaîne JSON.')
+
+
 class InscriptionCreateSerializer(serializers.Serializer):
     evenement = serializers.PrimaryKeyRelatedField(
         queryset=Evenement.objects.all()
@@ -109,48 +142,10 @@ class InscriptionCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     telephone = serializers.CharField()
 
-    reponses = serializers.ListField(
-        child=serializers.DictField(),
-        write_only=True
-    )
+    reponses = ReponsesJSONField(write_only=True)
 
-    def to_internal_value(self, data):
-        """
-        Parser manuellement le JSON du champ 'reponses' quand il vient du FormData
-        """
-        import json
-        from rest_framework.exceptions import ValidationError
+    # La méthode to_internal_value n'est plus nécessaire car ReponsesJSONField gère le parsing
 
-        # COPIE SUPERFICIELLE POUR POUVOIR MODIFIER
-        if hasattr(data, '_mutable'):
-            data = data.copy()
-
-        # SI 'reponses' EST UNE STRING (cas du FormData/Upload), ON LA PARSE
-        if 'reponses' in data and isinstance(data['reponses'], str):
-            try:
-                data['reponses'] = json.loads(data['reponses'])
-            except ValueError:
-                raise ValidationError({'reponses': ['Format JSON invalide.']})
-
-        return super().to_internal_value(data)
-
-    def to_internal_value(self, data):
-        """
-        Parser manuellement le JSON dans le champ 'reponses' quand c'est une string
-        (nécessaire pour les uploads multipart/form-data)
-        """
-        # COPIE SUPERFICIELLE POUR POUVOIR MODIFIER
-        if hasattr(data, '_mutable'):
-            data = data.copy()
-
-        # SI 'reponses' EST UNE STRING (cas du FormData/Upload), ON LA PARSE
-        if 'reponses' in data and isinstance(data['reponses'], str):
-            try:
-                data['reponses'] = json.loads(data['reponses'])
-            except ValueError:
-                raise serializers.ValidationError({'reponses': ['Format JSON invalide.']})
-
-        return super().to_internal_value(data)
 
     def validate(self, data):
         evenement = data['evenement']
@@ -183,8 +178,15 @@ class InscriptionCreateSerializer(serializers.Serializer):
             # Validation des champs obligatoires
             if champ.obligatoire:
                 if champ.type == 'file':
-                    # Pour les fichiers, vérifier que c'est un fichier valide
-                    if not valeur or (hasattr(valeur, 'size') and valeur.size == 0):
+                    # Pour les fichiers, vérifier que request.FILES contient le fichier
+                    request = self.context.get('request')
+                    if request and hasattr(request, 'FILES'):
+                        file_key = f'fichier_champ_{champ_id}'
+                        if file_key not in request.FILES or request.FILES[file_key].size == 0:
+                            raise serializers.ValidationError(
+                                f"{champ.label} est obligatoire (fichier requis)"
+                            )
+                    else:
                         raise serializers.ValidationError(
                             f"{champ.label} est obligatoire (fichier requis)"
                         )
@@ -223,21 +225,26 @@ class InscriptionCreateSerializer(serializers.Serializer):
                             f"Format de date invalide pour {champ.label}. Utilisez AAAA-MM-JJ ou JJ/MM/AAAA"
                         )
 
-            if champ.type == 'file' and valeur:
-                # Validation basique du fichier
-                if hasattr(valeur, 'size') and valeur.size > 10 * 1024 * 1024:  # 10MB max
-                    raise serializers.ValidationError(
-                        f"Fichier trop volumineux pour {champ.label} (max 10MB)"
-                    )
-                # Vérifier l'extension si nécessaire
-                allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
-                if hasattr(valeur, 'name'):
-                    import os
-                    ext = os.path.splitext(valeur.name)[1].lower()
-                    if ext not in allowed_extensions:
-                        raise serializers.ValidationError(
-                            f"Type de fichier non autorisé pour {champ.label}. Extensions acceptées: {', '.join(allowed_extensions)}"
-                        )
+            if champ.type == 'file':
+                # Validation du fichier depuis request.FILES
+                request = self.context.get('request')
+                if request and hasattr(request, 'FILES'):
+                    file_key = f'fichier_champ_{champ_id}'
+                    if file_key in request.FILES:
+                        fichier = request.FILES[file_key]
+                        # Validation basique du fichier
+                        if fichier.size > 10 * 1024 * 1024:  # 10MB max
+                            raise serializers.ValidationError(
+                                f"Fichier trop volumineux pour {champ.label} (max 10MB)"
+                            )
+                        # Vérifier l'extension si nécessaire
+                        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+                        import os
+                        ext = os.path.splitext(fichier.name)[1].lower()
+                        if ext not in allowed_extensions:
+                            raise serializers.ValidationError(
+                                f"Type de fichier non autorisé pour {champ.label}. Extensions acceptées: {', '.join(allowed_extensions)}"
+                            )
 
         # Vérifier si l'événement a des places restantes
         if evenement.nombre_places <= 0:
@@ -253,6 +260,7 @@ class InscriptionCreateSerializer(serializers.Serializer):
         inscription = Inscription.objects.create(**validated_data)
 
         # Créer les réponses aux champs
+        request = self.context.get('request')
         for r in reponses_data:
             champ = EvenementChamp.objects.get(id=r['champ'])
             valeur = r.get('valeur')
@@ -279,7 +287,16 @@ class InscriptionCreateSerializer(serializers.Serializer):
             elif champ.type == 'checkbox':
                 reponse.valeur_bool = valeur
             elif champ.type == 'file':
-                reponse.valeur_fichier = valeur
+                # Pour les fichiers, récupérer depuis request.FILES avec la clé fichier_champ_{id}
+                if request and hasattr(request, 'FILES'):
+                    file_key = f'fichier_champ_{champ.id}'
+                    if file_key in request.FILES:
+                        reponse.valeur_fichier = request.FILES[file_key]
+                    else:
+                        # Si pas de fichier trouvé, utiliser None (champ optionnel)
+                        reponse.valeur_fichier = None
+                else:
+                    reponse.valeur_fichier = None
             reponse.save()
 
         # Décrémenter le nombre de places
