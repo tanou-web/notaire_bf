@@ -61,3 +61,8 @@ except Evenement.DoesNotExist:
     print("ERREUR: L'événement 8 n'existe pas!")
 except Exception as e:
     print(f"ERREUR: {e}")
+
+
+
+
+
