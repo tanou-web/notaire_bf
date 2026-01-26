@@ -8,7 +8,7 @@ from .serializers import (
     InscriptionSerializer,
     InscriptionCreateSerializer
 )
-
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class EvenementViewSet(viewsets.ModelViewSet):
     queryset = Evenement.objects.filter(actif=True)
@@ -54,6 +54,7 @@ class EvenementViewSet(viewsets.ModelViewSet):
 class InscriptionViewSet(viewsets.ModelViewSet):
     queryset = Inscription.objects.all()
     permission_classes = [permissions.AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_serializer_class(self):
         if self.action == 'create':

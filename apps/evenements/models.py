@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.core.validators import FileExtensionValidator
 
 # models.py
 class Evenement(models.Model):
@@ -72,14 +73,26 @@ class InscriptionReponse(models.Model):
         on_delete=models.CASCADE,
         related_name='reponses'
     )
-
     champ = models.ForeignKey(EvenementChamp, on_delete=models.CASCADE)
 
     valeur_texte = models.TextField(blank=True, null=True)
     valeur_nombre = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     valeur_date = models.DateField(blank=True, null=True)
-    valeur_fichier = models.FileField(upload_to='evenements/reponses/', blank=True, null=True)
-    valeur_bool = models.BooleanField(null=True)
+    
+    # CORRIGE LE BOOLEANFIELD :
+    valeur_bool = models.BooleanField(default=None, null=True, blank=True)
+    
+    # AJOUTE DES VALIDATEURS POUR LES FICHIERS :
+    valeur_fichier = models.FileField(
+        upload_to='evenements/reponses/',
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
+            )
+        ]
+    )
 
-    def __str__(self):
+    def _str_(self):
         return f"{self.inscription} - {self.champ.label}"
