@@ -179,8 +179,20 @@ class InscriptionCreateSerializer(serializers.Serializer):
     # =========================
 
     def validate(self, data):
+        # === DEBUG: Vérification des données reçues ===
+        request = self.context.get('request')
+        if request:
+            print("=== DEBUG FILES ===")
+            print(request.FILES)
+            print("FILES keys:", list(request.FILES.keys()))
+            print("=== DEBUG POST ===")
+            print("reponses raw:", request.POST.get('reponses'))
+            
         evenement = data['evenement']
         reponses = data['reponses']
+        
+        if request:
+            print("reponses parsed:", reponses)
 
         champs = EvenementChamp.objects.filter(
             evenement=evenement,
@@ -216,6 +228,13 @@ class InscriptionCreateSerializer(serializers.Serializer):
                     raise serializers.ValidationError(
                         f"{champ.label} est obligatoire"
                     )
+                
+                # Validation des options pour le select (Déplacé DANS la boucle)
+                if champ.type == 'select' and champ.options:
+                    if valeur and valeur not in champ.options:
+                         raise serializers.ValidationError(
+                            f"Valeur invalide pour {champ.label}"
+                        )
 
             if champ.type == 'number':
                 if valeur in [None, ""]:
@@ -241,14 +260,6 @@ class InscriptionCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Toutes les places sont déjà réservées"
             )
-
-        if champ.type == 'select':
-            if champ.options:
-                if valeur not in champ.options:
-                    raise serializers.ValidationError(
-                        f"Valeur invalide pour {champ.label}"
-                    )
-
 
         return data
 
