@@ -16,6 +16,7 @@ class Evenement(models.Model):
     description = models.TextField(blank=True)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')  # <- ajouté
     actif = models.BooleanField(default=True)
+    image = models.ImageField(upload_to='evenements/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     nombre_places = models.PositiveIntegerField(default=0)
 
