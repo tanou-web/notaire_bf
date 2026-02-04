@@ -26,7 +26,8 @@ class DemandeViewSet(viewsets.ModelViewSet):
         Filtre les demandes selon l'utilisateur :
         - Admin/Superuser : voit toutes les demandes
         - Utilisateur authentifié : voit ses propres demandes
-        - Utilisateur anonyme : peut filtrer par email ou référence via query params
+        - Utilisateur anonyme : doit filtrer par email OU référence (ou les deux)
+          Le paramètre 'id' dans l'URL (retrieve) est supporté si 'email' ou 'reference' match.
         """
         user = self.request.user
         if user.is_superuser or user.is_staff:
@@ -34,26 +35,31 @@ class DemandeViewSet(viewsets.ModelViewSet):
         elif user.is_authenticated:
             queryset = DemandesDemande.objects.filter(utilisateur=user)
         else:
-            # Utilisateur anonyme : peut voir une demande spécifique par email ou référence
+            # Utilisateur anonyme : nécessite au moins un critère pour voir des données
             email = self.request.query_params.get('email')
             reference = self.request.query_params.get('reference')
 
-            queryset = DemandesDemande.objects.none()
-            if email:
-                queryset = DemandesDemande.objects.filter(email_reception=email)
-            elif reference:
-                queryset = DemandesDemande.objects.filter(reference=reference)
+            if email or reference:
+                filters = Q()
+                if email:
+                    filters &= Q(email_reception=email)
+                if reference:
+                    filters &= Q(reference=reference)
+                
+                # On ne montre que les demandes anonymes (utilisateur is None)
+                # ou toutes les demandes correspondant aux critères ? 
+                # Généralement pour le suivi, on autorise si la REF/EMAIL match.
+                queryset = DemandesDemande.objects.filter(filters)
             else:
                 queryset = DemandesDemande.objects.none()
 
         # Support du paramètre 'q' pour la recherche générale
         search_query = self.request.query_params.get('q', None)
         if search_query:
+            # Correction : Retrait des champs inexistants nom_reception/prenom_reception
             queryset = queryset.filter(
                 Q(reference__icontains=search_query) |
-                Q(email_reception__icontains=search_query) |
-                Q(prenom_reception__icontains=search_query) |
-                Q(nom_reception__icontains=search_query)
+                Q(email_reception__icontains=search_query)
             )
 
         return queryset
