@@ -24,9 +24,11 @@ class DemandesDemande(models.Model):
     reference = models.CharField(max_length=50, unique=True, blank=True, null=True)
     utilisateur = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='demandes',
-        verbose_name="Utilisateur"
+        verbose_name="Utilisateur",
+        null=True,
+        blank=True
     )
     document = models.ForeignKey('documents.DocumentsDocument', on_delete=models.CASCADE)
     statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='brouillon')
