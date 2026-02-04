@@ -65,39 +65,17 @@ class DemandeViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """
-        Surcharge de la création pour gérer :
-        1. La création automatique des pièces jointes envoyées avec la demande
+        Création d'une demande.
+        Note: Les pièces jointes doivent être envoyées séparément 
+        via l'endpoint /api/demandes/pieces-jointes/
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # 1. Créer la demande
+        # Créer la demande
         demande = serializer.save()
         
-        # 2. Traiter les fichiers envoyés comme pièces jointes
-        if request.FILES:
-            for key, file_obj in request.FILES.items():
-                # Déterminer le type de pièce à partir de la clé (si possible)
-                type_piece = 'autre'
-                known_types = [choice[0] for choice in DemandesPieceJointe.TYPE_PIECE_CHOICES]
-                
-                # Si la clé est un type connu (ex: 'cnib', 'passeport')
-                if key in known_types:
-                    type_piece = key
-                elif 'fichier_champ_' in key:
-                    # Pour la compatibilité avec le format d'événements
-                    type_piece = 'document_legal'
-                
-                DemandesPieceJointe.objects.create(
-                    demande=demande,
-                    type_piece=type_piece,
-                    fichier=file_obj,
-                    nom_original=file_obj.name,
-                    taille_fichier=file_obj.size
-                )
-        
-        # 4. Retourner la réponse avec le serializer complet pour avoir tous les détails
-        # (id, reference, document_details, etc.)
+        # Retourner la réponse complète avec tous les détails
         headers = self.get_success_headers(serializer.data)
         full_serializer = DemandeSerializer(demande, context=self.get_serializer_context())
         return Response(full_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
