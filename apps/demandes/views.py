@@ -15,11 +15,16 @@ from apps.utilisateurs.permissions import IsOwnerOrReadOnly
 class DemandeViewSet(viewsets.ModelViewSet):
     queryset = DemandesDemande.objects.all()
     serializer_class = DemandeSerializer
-    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['statut', 'document', 'notaire']
     search_fields = ['reference', 'email_reception']
     ordering_fields = ['created_at', 'updated_at', 'montant_total']
+    
+    def get_permissions(self):
+        """Gestion granulaire des permissions"""
+        if self.action in ['create', 'list', 'suivi_demande']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
     
     def get_queryset(self):
         """
@@ -138,6 +143,38 @@ class DemandeViewSet(viewsets.ModelViewSet):
         # Retourner la réponse complète avec tous les détails
         full_serializer = DemandeSerializer(demande, context=self.get_serializer_context())
         return Response(full_serializer.data, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, *args, **kwargs):
+        """Interdire l'accès direct par ID pour les utilisateurs anonymes"""
+        if not request.user.is_authenticated:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accès direct par ID interdit pour les visiteurs. Utilisez la route de suivi avec référence.")
+        return super().retrieve(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='suivi')
+    def suivi_demande(self, request):
+        """Route dédiée pour le suivi anonyme par référence"""
+        reference = request.query_params.get('reference', '').strip()
+        email = request.query_params.get('email', '').strip()
+
+        if not reference:
+            return Response(
+                {'error': 'La référence est obligatoire pour le suivi.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        filters = Q(reference__iexact=reference)
+        if email:
+            filters &= Q(email_reception__iexact=email)
+
+        try:
+            demande = DemandesDemande.objects.get(filters)
+        except DemandesDemande.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Aucune demande trouvée avec cette référence.")
+
+        serializer = self.get_serializer(demande)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def assigner_notaire(self, request, pk=None):
