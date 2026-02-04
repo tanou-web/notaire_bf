@@ -36,17 +36,16 @@ class PaiementSerializer(serializers.ModelSerializer):
     def get_type_paiement_display(self, obj):
         """Afficher le type de paiement en français"""
         return {
-            'orange_money': 'Orange Money',
-            'moov_money': 'Moov Money'
+            'yengapay': 'Yengapay',
         }.get(obj.type_paiement, obj.type_paiement)
 
     def get_statut_display(self, obj):
         """Afficher le statut en français"""
         return {
-            'initie': 'Initié',
+            'initiee': 'Initié',
             'en_attente': 'En attente',
-            'reussi': 'Réussi',
-            'echec': 'Échec'
+            'validee': 'Réussi',
+            'echouee': 'Échec'
         }.get(obj.statut, obj.statut)
 
     def get_montant_formate(self, obj):
@@ -80,7 +79,7 @@ class PaiementSerializer(serializers.ModelSerializer):
 class PaiementCreateSerializer(serializers.Serializer):
     """Serializer pour créer un paiement"""
     demande_id = serializers.IntegerField()
-    type_paiement = serializers.ChoiceField(choices=['orange_money', 'moov_money'])
+    type_paiement = serializers.ChoiceField(choices=['yengapay'])
 
     def validate_demande_id(self, value):
         """Valider que la demande existe et est éligible au paiement"""
@@ -121,11 +120,8 @@ class PaiementCreateSerializer(serializers.Serializer):
         # Montant de la demande
         montant = demande.montant_total
     
-        # Calculer commission 3%
-        commission = (Decimal(montant) * Decimal('0.03')).quantize(
-            Decimal('0.01'), 
-            rounding=ROUND_HALF_UP
-        )
+        # Commission mise à 0 car gérée par le fournisseur
+        commission = Decimal('0.00')
     
         # Générer une référence unique avec timestamp
         timestamp = int(timezone.now().timestamp() * 1000)  # Millisecondes
@@ -139,12 +135,12 @@ class PaiementCreateSerializer(serializers.Serializer):
             type_paiement=type_paiement,
             montant=montant,
             commission=commission,
-            statut='initie',
+            statut='initiee',
             donnees_api={
                 'initiated_at': timezone.now().isoformat(),
                 'provider': type_paiement,
                 'montant': float(montant),
-                'commission': float(commission),
+                'commission': 0.0,
                 'demande_reference': demande.reference
             },
             date_creation=timezone.now(),
@@ -168,8 +164,8 @@ class PaiementUpdateSerializer(serializers.ModelSerializer):
         """Mettre à jour avec gestion de la date de validation"""
         new_statut = validated_data.get('statut', instance.statut)
     
-        # Si le statut passe à 'reussi', mettre à jour la date de validation
-        if new_statut == 'reussi' and instance.statut != 'reussi':
+        # Si le statut passe à 'validee', mettre à jour la date de validation
+        if new_statut == 'validee' and instance.statut != 'validee':
             validated_data['date_validation'] = timezone.now()
         
             # Mettre à jour le statut de la demande
@@ -224,10 +220,11 @@ class WebhookSerializer(serializers.Serializer):
         # Normaliser le statut
         statut = data.get('statut', '').upper()
         statut_normalise = {
-            'SUCCESS': 'reussi',
-            'COMPLETED': 'reussi',
-            'FAILED': 'echec',
-            'CANCELLED': 'echec',
+            'SUCCESS': 'validee',
+            'DONE': 'validee',
+            'COMPLETED': 'validee',
+            'FAILED': 'echouee',
+            'CANCELLED': 'echouee',
             'PENDING': 'en_attente'
         }.get(statut, 'en_attente')
     
@@ -270,9 +267,9 @@ class InitierPaiementResponseSerializer(serializers.Serializer):
 class StatistiquesPaiementSerializer(serializers.Serializer):
     """Serializer pour les statistiques de paiement"""
     total_transactions = serializers.IntegerField()
-    transactions_reussies = serializers.IntegerField()
+    transactions_reussies = serializers.IntegerField(source='transactions_validees')
     transactions_en_attente = serializers.IntegerField()
-    transactions_echec = serializers.IntegerField()
+    transactions_echec = serializers.IntegerField(source='transactions_echouees')
     montant_total = serializers.DecimalField(max_digits=15, decimal_places=2)
     commission_totale = serializers.DecimalField(max_digits=15, decimal_places=2)
     moyenne_montant = serializers.DecimalField(max_digits=10, decimal_places=2)

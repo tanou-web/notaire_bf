@@ -3,8 +3,7 @@ from django.utils import timezone
 
 class PaiementsTransaction(models.Model):
     TYPE_CHOICES = (
-        ('orange_money', 'Orange Money'),
-        ('moov_money', 'Moov Money'),
+        ('yengapay', 'Yengapay (Orange, Moov, Sank, Telecel)'),
     )
 
     STATUT_CHOICES = (

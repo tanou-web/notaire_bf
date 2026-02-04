@@ -355,19 +355,12 @@ ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 # settings.py
 
-# Configuration Orange Money
-ORANGE_MONEY_API_URL = os.getenv('ORANGE_MONEY_API_URL', 'https://api.orange.com/orange-money-webpay/bf/v1')
-ORANGE_MONEY_API_KEY = os.getenv('ORANGE_MONEY_API_KEY', '')
-ORANGE_MONEY_API_SECRET = os.getenv('ORANGE_MONEY_API_SECRET', '')
-ORANGE_MONEY_MERCHANT_CODE = os.getenv('ORANGE_MONEY_MERCHANT_CODE', '')
-ORANGE_MONEY_CALLBACK_URL = os.getenv('ORANGE_MONEY_CALLBACK_URL', 'https://votre-domaine.com/paiement/callback')
-
-# Configuration Moov Money
-MOOV_MONEY_API_URL = os.getenv('MOOV_MONEY_API_URL', 'https://api.moov-africa.com/bf')
-MOOV_MONEY_API_KEY = os.getenv('MOOV_MONEY_API_KEY', '')
-MOOV_MONEY_API_SECRET = os.getenv('MOOV_MONEY_API_SECRET', '')
-MOOV_MONEY_MERCHANT_ID = os.getenv('MOOV_MONEY_MERCHANT_ID', '')
-MOOV_MONEY_CALLBACK_URL = os.getenv('MOOV_MONEY_CALLBACK_URL', 'https://notaire-bf-1ns8.onrender.com/api/auth//paiement/callback')
+# Configuration Yengapay
+YENGAPAY_API_KEY = os.getenv('YENGAPAY_API_KEY', 'ULmsHRgiSd5WQ6it52ZQr00zlKvefaeg')
+YENGAPAY_ORGANIZATION_ID = os.getenv('YENGAPAY_ORGANIZATION_ID', '')
+YENGAPAY_PROJECT_ID = os.getenv('YENGAPAY_PROJECT_ID', '77423')
+YENGAPAY_WEBHOOK_SECRET = os.getenv('YENGAPAY_WEBHOOK_SECRET', 'e6282d55-a72d-421e-a844-99caa8a3b091')
+YENGAPAY_API_URL = os.getenv('YENGAPAY_API_URL', 'https://api.yengapay.com/api/v1')
 
 # URL de base de votre application
 BASE_URL = os.getenv('BASE_URL', 'https://notaire-bf-1ns8.onrender.com')

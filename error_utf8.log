@@ -1,0 +1,93 @@
+﻿Found 1 test(s).
+python : Creating 
+test database for 
+alias 'default'...
+At line:1 char:1
++ python manage.py 
+test apps.paiements.t
+ests_yengapay.Yengapa
+yIntegrati ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Creatin   
+ g test d...as 'd    
+efault'...:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+System check 
+identified some 
+issues:
+
+WARNINGS:
+conseils.ConseilsCons
+eildujour: 
+(models.W046) SQLite 
+does not support 
+comments on tables 
+(db_table_comment).
+
+System check 
+identified 1 issue 
+(0 silenced).
+Unauthorized: /api/pa
+iements/webhook/yenga
+pay/
+F
+=====================
+=====================
+=====================
+=======
+FAIL: test_webhook_vi
+ew_success (apps.paie
+ments.tests_yengapay.
+YengapayIntegrationTe
+st.test_webhook_view_
+success)
+---------------------
+---------------------
+---------------------
+-------
+Traceback (most 
+recent call last):
+  File "C:\Python314\
+Lib\unittest\mock.py"
+, line 1432, in 
+patched
+    return 
+func(*newargs, 
+**newkeywargs)
+  File "C:\Users\DELL
+\Desktop\notaire_bf (
+2)\apps\paiements\tes
+ts_yengapay.py", 
+line 108, in test_web
+hook_view_success
+    self.assertEqual(
+response.status_code,
+ 200)
+    ~~~~~~~~~~~~~~~~^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^
+AssertionError: 401 
+!= 200
+
+---------------------
+---------------------
+---------------------
+-------
+Ran 1 test in 0.898s
+
+FAILED (failures=1)
+Destroying test 
+database for alias 
+'default'...
+

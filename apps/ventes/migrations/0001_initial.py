@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                 ('vente_sticker', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='paiements', to='ventes.ventesticker')),
             ],
             options={
-                'constraints': [models.CheckConstraint(condition=models.Q(('demande__isnull', False), ('vente_sticker__isnull', False), _connector='OR'), name='paiement_demande_ou_vente')],
+                'constraints': [models.CheckConstraint(check=models.Q(('demande__isnull', False), ('vente_sticker__isnull', False), _connector='OR'), name='paiement_demande_ou_vente')],
             },
         ),
         migrations.CreateModel(

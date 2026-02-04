@@ -20,6 +20,7 @@ urlpatterns = [
     # Webhooks pour les opérateurs
     path('webhook/orange_money/', views.WebhookView.as_view(), name='webhook-orange-money'),
     path('webhook/moov_money/', views.WebhookView.as_view(), name='webhook-moov-money'),
+    path('webhook/yengapay/', views.WebhookView.as_view(), {'provider': 'yengapay'}, name='webhook-yengapay'),
     path('webhook/', PaiementWebhookAPIView.as_view(), name='paiement-webhook'),
 
     # Export et rapports

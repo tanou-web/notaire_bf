@@ -64,7 +64,7 @@ class PaiementWebhookAPIView(APIView):
             tx.donnees_api = tx.donnees_api or {}
             tx.donnees_api['webhook_payload'] = request.data
 
-            if statut_norm == 'reussi':
+            if statut_norm == 'validee':
                 from django.utils import timezone
                 tx.date_validation = timezone.now()
                 tx.save()
@@ -151,13 +151,13 @@ class InitierPaiementView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Créer la transaction
+            # Créer la transaction sans commission ajoutée (commission mise à 0)
             transaction = PaiementsTransaction.objects.create(
                 demande=demande,
                 type_paiement=type_paiement,
                 montant=demande.montant_total,
-                commission=demande.montant_total * 0.03,
-                statut='initie',
+                commission=0,
+                statut='initiee',
                 donnees_api={},
                 date_creation=timezone.now(),
                 date_maj=timezone.now()
@@ -182,7 +182,7 @@ class InitierPaiementView(APIView):
                     return Response({
                         'status': 'error',
                         'message': f"Échec de l'initiation du paiement: {payment_result.get('error')}",
-                        'transaction': TransactionSerializer(transaction).data
+                        'transaction': PaiementSerializer(transaction).data
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Sauvegarder les données de l'API
@@ -193,7 +193,7 @@ class InitierPaiementView(APIView):
                 return Response({
                     'status': 'success',
                     'message': 'Paiement initié avec succès',
-                    'transaction': TransactionSerializer(transaction).data,
+                    'transaction': PaiementSerializer(transaction).data,
                     'payment_url': payment_result['payment_url'],
                     'transaction_id': payment_result.get('transaction_id'),
                     'next_step': 'Redirigez l\'utilisateur vers payment_url pour effectuer le paiement'
@@ -232,7 +232,9 @@ class WebhookView(APIView):
         """
         try:
             # Récupérer la signature du header
-            signature = request.headers.get('X-Signature') or request.headers.get('Signature')
+            signature = request.headers.get('X-Signature') or \
+                        request.headers.get('Signature') or \
+                        request.headers.get('x-webhook-hash')
             
             # Récupérer les données
             data = request.data
@@ -241,10 +243,11 @@ class WebhookView(APIView):
             # Pour Moov Money, c'est dans 'transactionId'
             transaction_reference = None
             
-            if provider == 'orange_money':
-                transaction_reference = data.get('order_id') or data.get('reference')
-            elif provider == 'moov_money':
-                transaction_reference = data.get('transactionId') or data.get('orderId')
+            if provider == 'yengapay':
+                transaction_reference = data.get('reference')
+            else:
+                # Anciens providers (Orange/Moov) - fallback sur reference
+                transaction_reference = data.get('reference') or data.get('order_id') or data.get('transactionId')
             
             if not transaction_reference:
                 return Response(
@@ -277,30 +280,34 @@ class WebhookView(APIView):
             
             # Mapper les statuts selon le provider
             status_mapping = {
-                'orange_money': {
-                    'SUCCESS': 'reussi',
-                    'FAILED': 'echec',
+                'yengapay': {
+                    'DONE': 'validee',
+                    'SUCCESS': 'validee',
+                    'FAILED': 'echouee',
                     'PENDING': 'en_attente',
-                    'CANCELLED': 'echec'
-                },
-                'moov_money': {
-                    'COMPLETED': 'reussi',
-                    'FAILED': 'echec',
-                    'PENDING': 'en_attente',
-                    'CANCELLED': 'echec'
+                    'CANCELLED': 'echouee'
                 }
             }
             
-            # Déterminer le nouveau statut
-            provider_status = data.get('status') or data.get('paymentStatus')
-            new_status = status_mapping[provider].get(provider_status, 'en_attente')
+            # Fallback pour la compatibilité avec les anciens webhooks si nécessaire
+            if provider not in status_mapping:
+                provider_status = data.get('status') or data.get('paymentStatus')
+                if provider_status in ['SUCCESS', 'COMPLETED', 'DONE']:
+                    new_status = 'validee'
+                elif provider_status in ['FAILED', 'CANCELLED']:
+                    new_status = 'echouee'
+                else:
+                    new_status = 'en_attente'
+            else:
+                provider_status = data.get('status') or data.get('paymentStatus') or data.get('transactionStatus')
+                new_status = status_mapping[provider].get(provider_status, 'en_attente')
             
             # Mettre à jour la transaction
             old_status = transaction.statut
             transaction.statut = new_status
             
-            # Si le statut passe à 'reussi', mettre à jour la date de validation
-            if new_status == 'reussi' and old_status != 'reussi':
+            # Si le statut passe à 'validee', mettre à jour la date de validation
+            if new_status == 'validee' and old_status != 'validee':
                 transaction.date_validation = timezone.now()
                 
                 # Mettre à jour le statut de la demande
@@ -426,14 +433,14 @@ class VerifierPaiementView(APIView):
                 return Response({
                     'status': 'success',
                     'message': f'Transaction vérifiée: {new_status}',
-                    'transaction': TransactionSerializer(transaction).data,
+                    'transaction': PaiementSerializer(transaction).data,
                     'verification_result': verification_result
                 })
             else:
                 return Response({
                     'status': 'error',
                     'message': f'Erreur de vérification: {verification_result.get("error")}',
-                    'transaction': TransactionSerializer(transaction).data
+                    'transaction': PaiementSerializer(transaction).data
                 }, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:

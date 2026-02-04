@@ -1,12 +1,12 @@
-from .orange_money import OrangeMoneyService
-from .moov_money import MoovMoneyService
+from .yengapay import YengapayService
 
 
 def get_payment_service(transaction):
     """Factory pour obtenir le service de paiement approprié"""
     provider_map = {
-        'orange_money': OrangeMoneyService,
-        'moov_money': MoovMoneyService,
+        'yengapay': YengapayService,
+        'orange_money': YengapayService,  # Rétro-compatibilité: redirect Orange to Yengapay
+        'moov_money': YengapayService,    # Rétro-compatibilité: redirect Moov to Yengapay
     }
     
     provider_class = provider_map.get(transaction.type_paiement)

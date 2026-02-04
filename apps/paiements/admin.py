@@ -51,7 +51,9 @@ class PaiementsTransactionAdmin(admin.ModelAdmin):
             'initie': 'gray',
             'en_attente': 'orange',
             'reussi': 'green',
-            'echec': 'red'
+            'validee': 'green',
+            'echec': 'red',
+            'echouee': 'red'
         }
         color = colors.get(obj.statut, 'black')
         return format_html(

@@ -102,7 +102,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-date'],
                 'managed': True,
                 'indexes': [models.Index(fields=['date'], name='stats_visit_date_d7d822_idx'), models.Index(fields=['created_at'], name='stats_visit_created_2a1dea_idx')],
-                'constraints': [models.CheckConstraint(condition=models.Q(('visites__gte', 0)), name='visites_positive'), models.CheckConstraint(condition=models.Q(('pages_vues__gte', 0)), name='pages_vues_positive'), models.CheckConstraint(condition=models.Q(('taux_rebond__gte', 0), ('taux_rebond__lte', 100)), name='taux_rebond_valide')],
+                'constraints': [models.CheckConstraint(check=models.Q(('visites__gte', 0)), name='visites_positive'), models.CheckConstraint(check=models.Q(('pages_vues__gte', 0)), name='pages_vues_positive'), models.CheckConstraint(check=models.Q(('taux_rebond__gte', 0), ('taux_rebond__lte', 100)), name='taux_rebond_valide')],
             },
         ),
     ]
