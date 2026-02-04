@@ -28,7 +28,7 @@ class DemandeSerializer(serializers.ModelSerializer):
         # Validation pour Testament (demande de documents obligatoires)
         # On peut vérifier cela lors de la création ou mise à jour
         document = data.get('document')
-        if document and "testament" in document.titre.lower():
+        if document and "testament" in document.nom.lower():
             # Dans un vrai système, on vérifierait les pièces jointes associées
             # Ici on s'assure que l'utilisateur est informé que ces pièces sont requises
             pass
@@ -38,9 +38,16 @@ class DemandeSerializer(serializers.ModelSerializer):
 class DemandeCreateSerializer(serializers.ModelSerializer):
     """Serializer pour créer une demande - permet les utilisateurs anonymes"""
     
+    donnees_formulaire = serializers.JSONField(required=False, default=dict)
+    
     class Meta:
         model = DemandesDemande
-        fields = ['document', 'email_reception', 'donnees_formulaire', 'lien_affiliation']
+        fields = [
+            'id', 'reference', 'document', 'email_reception', 
+            'donnees_formulaire', 'lien_affiliation', 'statut', 
+            'montant_total', 'created_at'
+        ]
+        read_only_fields = ['id', 'reference', 'statut', 'montant_total', 'created_at']
     
     def validate_email_reception(self, value):
         """Valider que l'email est fourni"""
