@@ -66,19 +66,57 @@ class DemandeViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """
         Création d'une demande.
-        Note: Les pièces jointes doivent être envoyées séparément 
-        via l'endpoint /api/demandes/pieces-jointes/
+        Supporte le parsing JSON manuel pour donnees_formulaire si envoyé via multipart/form-data.
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        import json
+        # Utiliser un dictionnaire simple pour les données modifiables
+        mutable_data = request.data.dict()
+        
+        # Gérer donnees_formulaire si c'est une chaîne JSON (cas du multipart/form-data)
+        donnees_formulaire = mutable_data.get('donnees_formulaire')
+        if isinstance(donnees_formulaire, str) and donnees_formulaire:
+            try:
+                # On remplace la chaîne par l'objet Python parsé
+                mutable_data['donnees_formulaire'] = json.loads(donnees_formulaire)
+            except json.JSONDecodeError:
+                pass
+
+        # Utiliser les données préparées
+        serializer = self.get_serializer(data=mutable_data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         # Créer la demande
         demande = serializer.save()
         
+        # Traiter les fichiers envoyés comme pièces jointes (Optionnel / Automatique)
+        if request.FILES:
+            for key, file_obj in request.FILES.items():
+                try:
+                    # Déterminer le type de pièce
+                    type_piece = 'autre'
+                    known_types = [choice[0] for choice in DemandesPieceJointe.TYPE_PIECE_CHOICES]
+                    if key in known_types:
+                        type_piece = key
+                    elif 'fichier_champ_' in key:
+                        type_piece = 'document_legal'
+                    
+                    DemandesPieceJointe.objects.create(
+                        demande=demande,
+                        type_piece=type_piece,
+                        fichier=file_obj,
+                        nom_original=file_obj.name,
+                        taille_fichier=file_obj.size
+                    )
+                except Exception as e:
+                    # On log l'erreur S3 mais on ne fait pas échouer la création de la demande
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Erreur S3 lors de l'upload auto de {key}: {str(e)}")
+
         # Retourner la réponse complète avec tous les détails
-        headers = self.get_success_headers(serializer.data)
         full_serializer = DemandeSerializer(demande, context=self.get_serializer_context())
-        return Response(full_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(full_serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
     def assigner_notaire(self, request, pk=None):
