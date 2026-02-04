@@ -25,42 +25,57 @@ class DemandeViewSet(viewsets.ModelViewSet):
         """
         Filtre les demandes selon l'utilisateur :
         - Admin/Superuser : voit toutes les demandes
-        - Utilisateur authentifié : voit ses propres demandes
-        - Utilisateur anonyme : doit filtrer par email OU référence (ou les deux)
-          Le paramètre 'id' dans l'URL (retrieve) est supporté si 'email' ou 'reference' match.
+        - Utilisateur authentifié : voit ses propres demandes OU celles correspondant à la référence fournie
+        - Utilisateur anonyme : doit fournir email ET/OU référence pour voir des données
         """
         user = self.request.user
+        email = self.request.query_params.get('email', '').strip()
+        reference = self.request.query_params.get('reference', '').strip()
+
         if user.is_superuser or user.is_staff:
             queryset = DemandesDemande.objects.all()
         elif user.is_authenticated:
-            queryset = DemandesDemande.objects.filter(utilisateur=user)
+            # Base : ses propres demandes
+            base_filter = Q(utilisateur=user)
+            
+            # Extension : si recherche par référence/email, autoriser même si utilisateur est None
+            if email or reference:
+                tracking_filters = Q()
+                if email:
+                    tracking_filters &= Q(email_reception__iexact=email)
+                if reference:
+                    tracking_filters &= Q(reference__iexact=reference)
+                base_filter |= tracking_filters
+                
+            queryset = DemandesDemande.objects.filter(base_filter)
         else:
-            # Utilisateur anonyme : nécessite au moins un critère pour voir des données
-            email = self.request.query_params.get('email')
-            reference = self.request.query_params.get('reference')
-
+            # Anonyme : nécessite au moins un critère de suivi
             if email or reference:
                 filters = Q()
                 if email:
-                    filters &= Q(email_reception=email)
+                    filters &= Q(email_reception__iexact=email)
                 if reference:
-                    filters &= Q(reference=reference)
-                
-                # On ne montre que les demandes anonymes (utilisateur is None)
-                # ou toutes les demandes correspondant aux critères ? 
-                # Généralement pour le suivi, on autorise si la REF/EMAIL match.
+                    filters &= Q(reference__iexact=reference)
                 queryset = DemandesDemande.objects.filter(filters)
             else:
                 queryset = DemandesDemande.objects.none()
 
-        # Support du paramètre 'q' pour la recherche générale
-        search_query = self.request.query_params.get('q', None)
+        # Support du paramètre search 'q'
+        search_query = self.request.query_params.get('q', '').strip()
         if search_query:
-            # Correction : Retrait des champs inexistants nom_reception/prenom_reception
-            queryset = queryset.filter(
-                Q(reference__icontains=search_query) |
-                Q(email_reception__icontains=search_query)
-            )
+            # Si on n'a rien (cas anonyme sans email/ref), on tente une recherche exacte sur q
+            if queryset.count() == 0 and not (user.is_superuser or user.is_staff):
+                # On autorise la recherche par référence exacte via 'q' pour les anonymes
+                queryset = DemandesDemande.objects.filter(
+                    Q(reference__iexact=search_query) | 
+                    Q(email_reception__iexact=search_query)
+                )
+            else:
+                # Sinon on affine le queryset existant
+                queryset = queryset.filter(
+                    Q(reference__icontains=search_query) |
+                    Q(email_reception__icontains=search_query)
+                )
 
         return queryset
     
