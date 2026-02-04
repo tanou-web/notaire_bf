@@ -70,7 +70,7 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         # Calculer le montant total avec la commission (3%)
         document = validated_data['document']
         montant_base = document.prix
-        frais_commission = montant_base * 0.03  # 3% de commission
+        frais_commission = 0  # Commission supprimée
         validated_data['montant_total'] = montant_base
         validated_data['frais_commission'] = frais_commission
         
