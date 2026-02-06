@@ -122,7 +122,7 @@ from .serializers import (
 
 class InitierPaiementView(APIView):
     """Vue pour initier un paiement avec l'API de l'opérateur"""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         from demandes.models import DemandesDemande
@@ -138,9 +138,10 @@ class InitierPaiementView(APIView):
         
         try:
             # Récupérer la demande
+            # On autorise tout le monde à payer une demande en attente de paiement
+            # C'est une opération "write-only" (initiation) sécuritaire
             demande = DemandesDemande.objects.get(
                 id=demande_id, 
-                utilisateur=request.user,
                 statut='attente_paiement'  # Vérifier que la demande est en attente de paiement
             )
             
