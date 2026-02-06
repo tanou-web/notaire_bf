@@ -127,6 +127,11 @@ class DemandeViewSet(viewsets.ModelViewSet):
                     elif 'fichier_champ_' in key:
                         type_piece = 'document_legal'
                     
+                    # S'assurer que le fichier a un nom
+                    if not file_obj.name:
+                        import time
+                        file_obj.name = f"{key}_{int(time.time())}"
+                    
                     DemandesPieceJointe.objects.create(
                         demande=demande,
                         type_piece=type_piece,
@@ -138,7 +143,7 @@ class DemandeViewSet(viewsets.ModelViewSet):
                     # On log l'erreur S3 mais on ne fait pas échouer la création de la demande
                     import logging
                     logger = logging.getLogger(__name__)
-                    logger.error(f"Erreur S3 lors de l'upload auto de {key}: {str(e)}")
+                    logger.error(f"Erreur S3 lors de l'upload auto de {key}: {str(e)} - Type: {type(e)}")
 
         # Retourner la réponse complète avec tous les détails
         full_serializer = DemandeSerializer(demande, context=self.get_serializer_context())

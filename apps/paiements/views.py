@@ -161,7 +161,7 @@ class InitierPaiementView(APIView):
                 demande = DemandesDemande.objects.get(id=demande_id)
                 print(f"DEBUG PAYMENT INIT: Demande {demande_id} found. Status: {demande.statut}")
                 
-                if demande.statut != 'attente_paiement':
+                if demande.statut not in ['attente_paiement', 'attente_formulaire']:
                     print(f"DEBUG PAYMENT INIT: Invalid status {demande.statut} for demande {demande_id}")
                     return Response(
                         {'error': f'La demande n\'est pas en attente de paiement (Statut actuel: {demande.statut})'},
