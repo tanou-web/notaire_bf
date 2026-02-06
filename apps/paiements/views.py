@@ -141,7 +141,11 @@ class InitierPaiementView(APIView):
             )
 
         demande_id = get_param('demande_id', 'demandeId')
-        type_paiement = get_param('type_paiement', 'typePaiement') or get_param('payment_method', 'paymentMethod')
+        type_paiement = (
+            get_param('type_paiement', 'typePaiement') or 
+            get_param('payment_method', 'paymentMethod') or
+            get_param('moyen_paiement', 'moyenPaiement')
+        )
         
         if not demande_id or not type_paiement:
             return Response(
