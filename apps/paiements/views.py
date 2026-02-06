@@ -217,13 +217,15 @@ class InitierPaiementView(APIView):
                 
                 if not payment_result['success']:
                     # Si l'initiation échoue, marquer la transaction comme échec
+                    error_msg = payment_result.get('error')
+                    print(f"DEBUG PAYMENT ERROR: {error_msg}")
                     transaction.statut = 'echec'
                     transaction.donnees_api = payment_result.get('api_data', {})
                     transaction.save()
                     
                     return Response({
                         'status': 'error',
-                        'message': f"Échec de l'initiation du paiement: {payment_result.get('error')}",
+                        'message': f"Échec de l'initiation du paiement: {error_msg}",
                         'transaction': PaiementSerializer(transaction).data
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
