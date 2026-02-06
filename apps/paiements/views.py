@@ -157,10 +157,22 @@ class InitierPaiementView(APIView):
             # Récupérer la demande
             # On autorise tout le monde à payer une demande en attente de paiement
             # C'est une opération "write-only" (initiation) sécuritaire
-            demande = DemandesDemande.objects.get(
-                id=demande_id, 
-                statut='attente_paiement'  # Vérifier que la demande est en attente de paiement
-            )
+            try:
+                demande = DemandesDemande.objects.get(id=demande_id)
+                print(f"DEBUG PAYMENT INIT: Demande {demande_id} found. Status: {demande.statut}")
+                
+                if demande.statut != 'attente_paiement':
+                    print(f"DEBUG PAYMENT INIT: Invalid status {demande.statut} for demande {demande_id}")
+                    return Response(
+                        {'error': f'La demande n\'est pas en attente de paiement (Statut actuel: {demande.statut})'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except DemandesDemande.DoesNotExist:
+                print(f"DEBUG PAYMENT INIT: Demande {demande_id} does not exist in DB")
+                return Response(
+                    {'error': f'Demande {demande_id} introuvable'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
             
             # Vérifier si une transaction existe déjà
             if hasattr(demande, 'paiementstransaction'):
