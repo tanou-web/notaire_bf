@@ -176,10 +176,22 @@ class InitierPaiementView(APIView):
             
             # Vérifier si une transaction existe déjà
             if hasattr(demande, 'paiementstransaction'):
-                return Response(
-                    {'error': 'Une transaction existe déjà pour cette demande'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                existing_tx = demande.paiementstransaction
+                if existing_tx.statut in ['echouee', 'initiee', 'brouillon']:
+                    # On supprime l'ancienne transaction pour en recréer une
+                    print(f"DEBUG PAYMENT INIT: Deleting old transaction {existing_tx.reference} with status {existing_tx.statut}")
+                    existing_tx.delete()
+                elif existing_tx.statut == 'validee':
+                    return Response(
+                        {'error': 'Cette demande a déjà été payée'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    # En attente, etc.
+                    return Response(
+                        {'error': f'Une transaction est déjà en cours (Statut: {existing_tx.statut})'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             
             # Créer la transaction sans commission ajoutée (commission mise à 0)
             transaction = PaiementsTransaction.objects.create(

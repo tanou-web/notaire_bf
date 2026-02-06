@@ -314,31 +314,39 @@ if not DEBUG:
         # Configuration pour la production - AWS S3
         AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-        AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-        AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-west-1')
-        AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')  # Pour DigitalOcean Spaces
-        AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com')
-        AWS_DEFAULT_ACL = 'public-read'
-        AWS_S3_OBJECT_PARAMETERS = {
-            'CacheControl': 'max-age=86400',
-        }
-        AWS_LOCATION = 'media'
-
-        # Configuration des médias pour S3
-        if AWS_S3_CUSTOM_DOMAIN:
-            MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+        
+        if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+            print("WARNING: AWS Keys missing in production mode. Fallback to local storage to prevent crash.")
+            MEDIA_URL = '/media/'
+            MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+            STATIC_URL = '/static/'
+            STATIC_ROOT = BASE_DIR / 'staticfiles'
         else:
-            MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/'
+            AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+            AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-west-1')
+            AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')  # Pour DigitalOcean Spaces
+            AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com')
+            AWS_DEFAULT_ACL = 'public-read'
+            AWS_S3_OBJECT_PARAMETERS = {
+                'CacheControl': 'max-age=86400',
+            }
+            AWS_LOCATION = 'media'
 
-        # Configuration django-storages
-        STORAGES = {
-            "default": {
-                "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-            },
-            "staticfiles": {
-                "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
-            },
-        }
+            # Configuration des médias pour S3
+            if AWS_S3_CUSTOM_DOMAIN:
+                MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+            else:
+                MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/'
+
+            # Configuration django-storages
+            STORAGES = {
+                "default": {
+                    "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+                },
+                "staticfiles": {
+                    "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
+                },
+            }
 
     # Configuration commune pour les fichiers statiques
     STATIC_URL = '/static/'
