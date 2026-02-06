@@ -125,7 +125,7 @@ class InitierPaiementView(APIView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        from demandes.models import DemandesDemande
+        from apps.demandes.models import DemandesDemande
         
         demande_id = request.data.get('demande_id')
         type_paiement = request.data.get('type_paiement')
