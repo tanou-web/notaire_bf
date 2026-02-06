@@ -127,8 +127,21 @@ class InitierPaiementView(APIView):
     def post(self, request):
         from apps.demandes.models import DemandesDemande
         
-        demande_id = request.data.get('demande_id')
-        type_paiement = request.data.get('type_paiement')
+        print(f"DEBUG PAYMENT INIT: Data received: {request.data}")
+        print(f"DEBUG PAYMENT INIT: Query params: {request.query_params}")
+        
+        # Support snake_case (standard) and camelCase (JS frontend)
+        # Also check query params as fallback
+        def get_param(key_snake, key_camel):
+            return (
+                request.data.get(key_snake) or 
+                request.data.get(key_camel) or
+                request.query_params.get(key_snake) or
+                request.query_params.get(key_camel)
+            )
+
+        demande_id = get_param('demande_id', 'demandeId')
+        type_paiement = get_param('type_paiement', 'typePaiement') or get_param('payment_method', 'paymentMethod')
         
         if not demande_id or not type_paiement:
             return Response(
