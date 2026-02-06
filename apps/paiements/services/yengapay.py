@@ -19,11 +19,17 @@ class YengapayService(PaymentProvider):
     
     def initiate_payment(self):
         """Initier un paiement avec l'API Yengapay (Paiement Indirect)"""
-        if not self.config['organization_id'] or not self.config['project_id']:
+        missing = []
+        if not self.config['organization_id']:
+            missing.append('organization_id')
+        if not self.config['project_id']:
+            missing.append('project_id')
+            
+        if missing:
             return {
                 'success': False,
-                'error': "Organization ID ou Project ID manquant dans la configuration.",
-                'api_data': {}
+                'error': f"Configuration manquante: {', '.join(missing)} (Vérifiez le .env)",
+                'api_data': {'config_seen': {k: v for k, v in self.config.items() if k != 'webhook_secret'}}
             }
 
         endpoint = f"groups/{self.config['organization_id']}/payment-intent/{self.config['project_id']}"
