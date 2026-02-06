@@ -144,12 +144,13 @@ class InitierPaiementView(APIView):
         type_paiement = (
             get_param('type_paiement', 'typePaiement') or 
             get_param('payment_method', 'paymentMethod') or
-            get_param('moyen_paiement', 'moyenPaiement')
+            get_param('moyen_paiement', 'moyenPaiement') or
+            'yengapay'  # Default to Yengapay Hosted Checkout
         )
         
-        if not demande_id or not type_paiement:
+        if not demande_id:
             return Response(
-                {'error': 'demande_id et type_paiement sont requis'},
+                {'error': 'demande_id est requis'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
