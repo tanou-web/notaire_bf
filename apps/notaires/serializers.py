@@ -165,6 +165,7 @@ class StagiaireSerializer(serializers.ModelSerializer):
             'notaire_nom_complet',
             'nom',
             'prenom',
+            'photo',
             'email',
             'telephone',
             'statut',

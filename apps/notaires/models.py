@@ -88,6 +88,7 @@ class NotairesStagiaire(models.Model):
     notaire_maitre = models.ForeignKey(NotairesNotaire, on_delete=models.CASCADE, related_name='stagiaires')
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='notaires/stagiaires/photos/', blank=True, null=True)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_cours')
