@@ -30,24 +30,6 @@ class VenteStickerViewSet(viewsets.ViewSet):
     """
     API pour les ventes de stickers (liées à un notaire)
     """
-
-    def get_queryset(self):
-        return VenteSticker.objects.all()
-
-    def get_object(self):
-        queryset = self.get_queryset()
-        pk = self.kwargs.get('pk')
-        return get_object_or_404(queryset, pk=pk)
-
-    @action(detail=True, methods=['get'], url_path='recu', permission_classes=[permissions.AllowAny])
-    def download_recu_data(self, request, pk=None):
-        """
-        Endpoint pour récupérer les données du reçu formatées.
-        URL: /api/ventes-stickers/{id}/recu/
-        """
-        vente = self.get_object()
-        serializer = RecuVenteStickerSerializer(vente)
-        return Response(serializer.data)
     
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def creer(self, request):
@@ -281,7 +263,18 @@ class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = VenteSticker.objects.all()
     serializer_class = VentesStickerSerializer
     permission_classes = [permissions.AllowAny]
+    lookup_field = 'reference'
     
+    @action(detail=True, methods=['get'], url_path='recu')
+    def download_recu_data(self, request, reference=None):
+        """
+        Endpoint pour récupérer les données du reçu formatées.
+        URL: /api/ventes/stickers/{reference}/recu/
+        """
+        vente = self.get_object()
+        serializer = RecuVenteStickerSerializer(vente)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['get'])
     def notaires_vendeurs(self, request, pk=None):
         """
