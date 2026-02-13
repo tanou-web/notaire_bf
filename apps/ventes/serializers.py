@@ -660,3 +660,62 @@ class RecuStickerCreateSerializer(serializers.ModelSerializer):
         
         return super().create(validated_data)
 
+
+class RecuVenteStickerSerializer(serializers.ModelSerializer):
+    """
+    Formate les données pour le reçu PDF du Frontend.
+    """
+    numero = serializers.SerializerMethodField()
+    date_recu = serializers.SerializerMethodField()
+    bpf = serializers.SerializerMethodField()
+    notaire = serializers.SerializerMethodField()
+    lignes = serializers.SerializerMethodField()
+    mode_reglement = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VenteSticker
+        fields = ['numero', 'date_recu', 'bpf', 'notaire', 'lignes', 'mode_reglement']
+
+    def get_numero(self, obj):
+        # Format: REC-{ID}-ANNEE/ONBF
+        # Utilisation de date_vente car created_at n'est pas explicite dans le modèle VenteSticker
+        annee = obj.date_vente.year
+        return f"REC-{obj.id:03d}-{annee}/ONBF"
+
+    def get_date_recu(self, obj):
+        return obj.date_vente.strftime("%d/%m/%Y")
+
+    def get_bpf(self, obj):
+        # Montant total
+        return int(obj.montant_total)
+
+    def get_notaire(self, obj):
+        # Récupérer les infos du notaire lié
+        notaire = obj.notaire
+        if not notaire:
+            return None
+        return {
+            "nom": f"{notaire.nom.upper()} {notaire.prenom}",
+            "adresse": notaire.adresse or "Ouagadougou",
+            "rscpm": notaire.rscpm or "",
+            "ifu": notaire.ifu or "",
+            "telephone": notaire.telephone or ""
+        }
+
+    def get_mode_reglement(self, obj):
+        # Le modèle VenteSticker n'a pas de mode_reglement explicite, contrairement à VenteStickerNotaire
+        # On met 'espece' par défaut ou on cherche un paiement lié
+        return "espece"
+
+    def get_lignes(self, obj):
+        # Détails de la vente
+        return [
+            {
+                "libelle": f"ACHAT DE {obj.sticker.nom.upper()}" if obj.sticker else "ACHAT DE STICKERS",
+                "plage": "", # Plage non stockée dans VenteSticker (contrairement à VenteStickerNotaire)
+                "nombre": obj.quantite,
+                "prix_unitaire": int(obj.montant_total / obj.quantite) if obj.quantite > 0 else 0
+            }
+        ]
+
+
