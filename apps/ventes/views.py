@@ -237,6 +237,7 @@ class VenteStickerNotaireViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['notaire', 'type_sticker']
     search_fields = ['reference', 'plage_debut', 'plage_fin', 'notaire__nom']
+    lookup_field = 'reference'
 
     def get_permissions(self):
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
@@ -271,9 +272,19 @@ class VentesStickerViewSet(viewsets.ReadOnlyModelViewSet):
         Endpoint pour récupérer les données du reçu formatées.
         URL: /api/ventes/stickers/{reference}/recu/
         """
-        vente = self.get_object()
-        serializer = RecuVenteStickerSerializer(vente)
-        return Response(serializer.data)
+        try:
+            # Tenter de récupérer depuis VenteSticker (VEN-...)
+            vente = self.get_object()
+            serializer = RecuVenteStickerSerializer(vente)
+            return Response(serializer.data)
+        except Exception:
+            # Fallback : Tenter de récupérer depuis VenteStickerNotaire (VNT-...)
+            # si la référence commence par VNT
+            if reference and reference.startswith('VNT'):
+                vente_notaire = get_object_or_404(VenteStickerNotaire, reference=reference)
+                serializer = RecuStickerSerializer(vente_notaire)
+                return Response(serializer.data)
+            raise
 
     @action(detail=True, methods=['get'])
     def notaires_vendeurs(self, request, pk=None):
@@ -439,6 +450,7 @@ class RecuStickerViewSet(viewsets.ModelViewSet):
     """
     queryset = VenteStickerNotaire.objects.all().select_related('notaire', 'type_sticker')
     permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'reference'
 
     def get_serializer_class(self):
         if self.action == 'create':
