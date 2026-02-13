@@ -9,6 +9,7 @@ router = DefaultRouter()
 router.register(r'stickers', views.VentesStickerViewSet, basename='sticker')
 router.register(r'references-stickers', views.ReferenceStickerViewSet, basename='reference-sticker')
 router.register(r'ventes-stickers-notaires', views.VenteStickerNotaireViewSet, basename='vente-sticker-notaire')
+router.register(r'recus-stickers', views.RecuStickerViewSet, basename='recu-sticker')
 
 urlpatterns = [
     # URLs du router

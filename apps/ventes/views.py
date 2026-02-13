@@ -14,12 +14,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import VenteSticker, DemandeVente, Paiement, AvisClient, CodePromo, ReferenceSticker, VenteStickerNotaire
 from apps.demandes.models import DemandesDemande
-
 from .serializers import (
     VentesStickerSerializer, VenteStickerCreateSerializer,
     DemandeCreateSerializer, DemandeSerializer,
     AvisClientCreateSerializer, ReferenceStickerSerializer, 
-    VenteStickerNotaireSerializer
+    VenteStickerNotaireSerializer, RecuStickerSerializer, RecuStickerCreateSerializer
 )
 
 # ========================================
@@ -421,3 +420,39 @@ class StatistiquesNotairesAPIView(APIView):
             'demandes_total': demandes_stats.get('total_demandes') or 0,
             'demandes_terminees': demandes_stats.get('demandes_terminees') or 0
         })
+
+class RecuStickerViewSet(viewsets.ModelViewSet):
+    """
+    API pour la génération et la récupération des reçus de stickers
+    """
+    queryset = VenteStickerNotaire.objects.all().select_related('notaire', 'type_sticker')
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RecuStickerCreateSerializer
+        return RecuStickerSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return VenteStickerNotaire.objects.all().select_related('notaire', 'type_sticker')
+        return VenteStickerNotaire.objects.all().select_related('notaire', 'type_sticker')
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        vente = serializer.save()
+        
+        # Retourner le format de reçu spécifique
+        response_serializer = RecuStickerSerializer(vente)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def telecharger(self, request, pk=None):
+        """
+        Générer le PDF du reçu (Future implémentation)
+        """
+        recu = self.get_object()
+        # Logique de génération PDF ici
+        return Response({'status': 'PDF generation not implemented yet'})

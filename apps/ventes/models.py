@@ -112,6 +112,19 @@ class VenteStickerNotaire(models.Model):
         verbose_name="Reste à Payer"
     )
     
+    # Champs pour le Reçu
+    numero_recu = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    date_recu = models.DateField(blank=True, null=True)
+    mode_reglement = models.CharField(
+        max_length=20,
+        choices=[
+            ('espece', 'Espèces'),
+            ('cheque', 'Chèque'),
+            ('versement', 'Versement')
+        ],
+        default='espece'
+    )
+
     date_vente = models.DateTimeField(default=timezone.now, verbose_name="Date de vente")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -119,9 +132,38 @@ class VenteStickerNotaire(models.Model):
     def _generer_reference(self):
         return f"VNT-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
 
+    def _generer_numero_recu(self):
+        """
+        Génère un numéro de reçu au format XXX-ANNEE/ONBF
+        Ex: 001-2026/ONBF
+        """
+        annee = timezone.now().year
+        
+        # Trouver le dernier numéro pour cette année
+        dernier_recu = VenteStickerNotaire.objects.filter(
+            numero_recu__contains=f"-{annee}/ONBF"
+        ).order_by('numero_recu').last()
+        
+        if dernier_recu and dernier_recu.numero_recu:
+            try:
+                # Extraire la séquence (ex: 001)
+                sequence = int(dernier_recu.numero_recu.split('-')[0])
+                nouveau_seq = sequence + 1
+            except ValueError:
+                nouveau_seq = 1
+        else:
+            nouveau_seq = 1
+            
+        return f"{nouveau_seq:03d}-{annee}/ONBF"
+
     def save(self, *args, **kwargs):
         if not self.reference:
             self.reference = self._generer_reference()
+            
+        # Générer le numéro de reçu si pas encore défini
+        if not self.numero_recu:
+            self.numero_recu = self._generer_numero_recu()
+            self.date_recu = timezone.now().date()
         
         # Calcul automatique des montants
         if self.type_sticker:
@@ -137,7 +179,7 @@ class VenteStickerNotaire(models.Model):
         ordering = ['-date_vente']
 
     def __str__(self):
-        return f"{self.reference} - {self.notaire.nom_complet}"
+        return f"{self.reference} - {self.numero_recu or 'Sans reçu'} - {self.notaire.nom_complet}"
 
 
 # =====================================================

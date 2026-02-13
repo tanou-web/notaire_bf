@@ -565,4 +565,98 @@ class VenteStickerNotaireSerializer(serializers.ModelSerializer):
             'montant_total', 'montant_paye', 'reste_a_payer',
             'date_vente', 'created_at'
         ]
-        read_only_fields = ['reference', 'montant_total', 'reste_a_payer', 'created_at']
+
+class RecuStickerSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour le reçu de vente de stickers
+    Format spécifique pour l'impression
+    """
+    numero = serializers.CharField(source='numero_recu')
+    bpf = serializers.SerializerMethodField()
+    date = serializers.DateField(source='date_recu')
+    notaire = serializers.SerializerMethodField()
+    lignes = serializers.SerializerMethodField()
+    montant_total = serializers.DecimalField(max_digits=12, decimal_places=2)
+    montant_en_lettres = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VenteStickerNotaire
+        fields = [
+            'id',
+            'numero',
+            'bpf',
+            'date',
+            'notaire',
+            'mode_reglement',
+            'lignes',
+            'montant_total',
+            'montant_en_lettres'
+        ]
+
+    def get_bpf(self, obj):
+        """Montant total en entiers (pour affichage BPF)"""
+        return int(obj.montant_total)
+
+    def get_notaire(self, obj):
+        notaire = obj.notaire
+        return {
+            "id": notaire.id,
+            "nom": f"{notaire.nom} {notaire.prenom}",
+            "adresse": notaire.adresse,
+            "rscpm": notaire.rscpm or "N/A",
+            "ifu": notaire.ifu or "N/A",
+            "telephone": notaire.telephone
+        }
+
+    def get_lignes(self, obj):
+        return [
+            {
+                "libelle": f"ACHAT DE {obj.type_sticker.nom.upper()}",
+                "plage": f"{obj.plage_debut}-{obj.plage_fin}",
+                "nombre": obj.quantite,
+                "prix_unitaire": int(obj.type_sticker.prix_unitaire)
+            }
+        ]
+
+    def get_montant_en_lettres(self, obj):
+        """Conversion du montant en toutes lettres (version simplifiée)"""
+        # Note: Pour une version de production parfaite, utiliser une lib comme num2words
+        # Ici on fournit une version basique ou on laisse le frontend le faire si préféré.
+        # Mais on va essayer de fournir une chaîne propre.
+        try:
+            from apps.core.utils import montant_en_lettres # Check if utility exists
+            return montant_en_lettres(int(obj.montant_total))
+        except ImportError:
+            return f"{int(obj.montant_total)} francs CFA"
+
+class RecuStickerCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la création d'une vente de sticker via l'API de reçus
+    """
+    notaire_id = serializers.IntegerField(write_only=True)
+    reference_sticker_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = VenteStickerNotaire
+        fields = [
+            'notaire_id',
+            'reference_sticker_id',
+            'quantite',
+            'plage_debut',
+            'plage_fin',
+            'mode_reglement',
+            'date_vente'
+        ]
+
+    def create(self, validated_data):
+        notaire_id = validated_data.pop('notaire_id', None)
+        reference_sticker_id = validated_data.pop('reference_sticker_id', None)
+        
+        # Mappage vers les champs du modèle
+        if notaire_id:
+            validated_data['notaire_id'] = notaire_id
+        if reference_sticker_id:
+            validated_data['type_sticker_id'] = reference_sticker_id
+        
+        return super().create(validated_data)
+

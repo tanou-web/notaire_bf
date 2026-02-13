@@ -30,6 +30,9 @@ class NotairesNotaire(models.Model):
     actif = models.BooleanField(default=True)
     total_ventes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     total_cotisations = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    rscpm = models.CharField(max_length=100, blank=True, null=True, verbose_name="RSCPM")
+    ifu = models.CharField(max_length=100, blank=True, null=True, verbose_name="IFU")
+
 
     assurance_rc_date_echeance = models.DateField(
         blank=True,
