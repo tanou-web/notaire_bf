@@ -13,7 +13,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['burkinanotaires.com', 'www.burkinanotaires.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['burkinanotaires.com', 'www.burkinanotaires.com', '76.13.55.146', 'localhost', '127.0.0.1']
 #ALLOWED_HOSTS = ['*']
 #ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3001', '0.0.0.0']
 '''if DEBUG:
@@ -92,7 +92,7 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'notaires_bf.wsgi.application'
 # Database
-# On utilise PostgreSQL si les variables d'environnement sont définies, sinon SQLite par défaut.
+# On utilise PostgreSQL si les variables d'environnement sont définies.
 DB_NAME = os.getenv('DB_NAME')
 if DB_NAME:
     DATABASES = {
@@ -106,6 +106,10 @@ if DB_NAME:
         }
     }
 else:
+    if not DEBUG:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("DB_NAME manquant dans le fichier .env. Le fallback vers SQLite est interdit en production pour éviter les pertes de données.")
+    
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
