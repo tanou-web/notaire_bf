@@ -170,9 +170,9 @@ USE_L10N = True
 USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR.parent / 'static'
+STATIC_ROOT = BASE_DIR / 'static'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / 'notaires_bf/static',
 ]
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -330,7 +330,7 @@ if not DEBUG:
             MEDIA_URL = '/media/'
             MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
             STATIC_URL = '/static/'
-            STATIC_ROOT = BASE_DIR / 'staticfiles'
+            STATIC_ROOT = BASE_DIR / 'static'
         else:
             AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
             AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-west-1')
@@ -365,7 +365,7 @@ else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     STATIC_URL = '/static/'
     # STATICFILES_DIRS = [BASE_DIR / 'static']  # Supprimé car le dossier n'existe pas
-    STATIC_ROOT = BASE_DIR.parent / 'static'
+    STATIC_ROOT = BASE_DIR / 'static'
 
 # Configuration pour les images d'actualités
 ACTUALITES_IMAGE_DIR = 'actualites/'
