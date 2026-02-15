@@ -90,13 +90,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'notaires_bf.wsgi.application'
 # Database
 # On utilise PostgreSQL si les variables d'environnement sont définies, sinon SQLite par défaut.
-if os.getenv('DB_NAME'):
+DB_NAME = os.getenv('DB_NAME')
+if DB_NAME:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME'),
-            'USER': os.getenv('DB_USER'),
-            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'NAME': DB_NAME,
+            'USER': os.getenv('DB_USER', 'l3'),
+            'PASSWORD': os.getenv('DB_PASSWORD', '12345'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
