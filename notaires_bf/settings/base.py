@@ -10,7 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['burkinanotaires.com', 'www.burkinanotaires.com', 'localhost', '127.0.0.1']
+#ALLOWED_HOSTS = ['*']
 #ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3001', '0.0.0.0']
 '''if DEBUG:
     ALLOWED_HOSTS = ['*']
@@ -190,6 +191,8 @@ if DEBUG:
     ]
 else:
     CORS_ALLOWED_ORIGINS = [
+        "https://burkinanotaires.com",
+        "https://www.burkinanotaires.com",
         "https://notaire-bf-1ns8.onrender.com",
         "https://notaire-admin-bf.onrender.com",
         "https://notaire-bf.onrender.com",
@@ -357,7 +360,7 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     STATIC_URL = '/static/'
-    STATICFILES_DIRS = [BASE_DIR / 'static']
+    # STATICFILES_DIRS = [BASE_DIR / 'static']  # Supprimé car le dossier n'existe pas
     STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Configuration pour les images d'actualités
