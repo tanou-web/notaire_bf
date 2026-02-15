@@ -50,6 +50,12 @@ server {
     server_name $DOMAIN www.$DOMAIN;
 
     location = /favicon.ico { access_log off; log_not_found off; }
+
+    # Dossier pour la validation SSL (Certbot)
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
     location /static/ {
         root $PROJECT_DIR;
     }
