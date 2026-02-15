@@ -4,16 +4,23 @@ from dotenv import load_dotenv
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# BASE_DIR est maintenant la racine du projet (là où se trouve manage.py)
+# BASE_DIR est la racine du projet (où se trouve manage.py et .env)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Chargement explicite du fichier .env (à la racine)
-load_dotenv(BASE_DIR / '.env')
+# Chargement robuste du fichier .env
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Optionnel: on peut aussi chercher dans le dossier du package
+    alt_env_path = Path(__file__).resolve().parent.parent / '.env'
+    if alt_env_path.exists():
+        load_dotenv(alt_env_path)
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['burkinanotaires.com', 'www.burkinanotaires.com', '76.13.55.146', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['burkinanotaires.com', 'notaire-bf-1ns8.onrender.com','www.burkinanotaires.com', '76.13.55.146', 'localhost', '127.0.0.1']
 #ALLOWED_HOSTS = ['*']
 #ALLOWED_HOSTS = ['notaire-bf-1ns8.onrender.com', 'localhost', '127.0.0.1','3001', '0.0.0.0']
 '''if DEBUG:
