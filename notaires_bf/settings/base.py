@@ -96,8 +96,8 @@ if DB_NAME:
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': DB_NAME,
-            'USER': os.getenv('DB_USER', 'l3'),
-            'PASSWORD': os.getenv('DB_PASSWORD', '12345'),
+            'USER': os.getenv('DB_USER', 'notaire'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'notaire'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
