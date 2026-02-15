@@ -355,9 +355,6 @@ if not DEBUG:
                 },
             }
 
-    # Configuration commune pour les fichiers statiques
-    STATIC_URL = '/static/'
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 else:
     # Configuration pour le développement - stockage local
