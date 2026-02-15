@@ -14,7 +14,6 @@ django-cors-headers==4.9.0
 django-crispy-forms==2.4
 django-filter==25.2
 django-import-export==4.3.14
-django-rest-framework==0.1.0
 django-storages==1.14.6
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
@@ -26,7 +25,6 @@ inflection==0.5.1
 jmespath==1.0.1
 packaging==25.0
 pillow==11.3.0
-psycopg2==2.9.11
 psycopg2-binary==2.9.11
 PyJWT==2.10.1
 python-dateutil==2.9.0.post0
