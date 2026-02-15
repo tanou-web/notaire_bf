@@ -362,7 +362,7 @@ else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     STATIC_URL = '/static/'
     # STATICFILES_DIRS = [BASE_DIR / 'static']  # Supprimé car le dossier n'existe pas
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATIC_ROOT = BASE_DIR.parent / 'static'
 
 # Configuration pour les images d'actualités
 ACTUALITES_IMAGE_DIR = 'actualites/'
